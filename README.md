@@ -33,6 +33,7 @@ DCVRP-main/
 ├── checkpoints/             # Trained model weights
 │   ├── DVNDA.pt             # Proposed DVNDA model (n=20, m=4)
 │   ├── DVNDA_n35.pt         # Proposed DVNDA model (n=35, m=7)
+│   ├── DVNDA_n50.pt         # Proposed DVNDA model (n=50, m=10)
 │   ├── AMCVN.pt             # AMCVN baseline model
 │   ├── LiDRL.pt             # LiDRL baseline model
 │   ├── MAAM.pt              # MAAM baseline model
@@ -112,6 +113,9 @@ python eval.py --method DVNDA
 
 # 35 customers, 7 vehicles
 python eval.py --method DVNDA -n 35 -m 7
+
+# 50 customers, 10 vehicles
+python eval.py --method DVNDA -n 50 -m 10
 ```
 
 To evaluate all models:
@@ -138,6 +142,9 @@ python train.py --method DVNDA --epochs 100 --batch-size 100 --lr 0.0001
 
 # Train on n=35, m=7
 python train.py --method DVNDA -n 35 -m 7 --epochs 100 --batch-size 50 --lr 0.0001
+
+# Train on n=50, m=10
+python train.py --method DVNDA -n 50 -m 10 --epochs 100 --batch-size 50 --lr 0.0001
 ```
 
 Checkpoints will be saved automatically to `checkpoints/`.

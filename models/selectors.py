@@ -88,7 +88,10 @@ class IndependentSelector(BaseSelector):
     ) -> torch.Tensor:
         if getattr(self, "regimes", None):
             dyn_ratio = (customers[:, 1:, 4] > 0).float().mean().item()
-            regime_idx = 2 if dyn_ratio <= 0.35 else (0 if dyn_ratio <= 0.60 else 1)
+            if len(self.regimes) == 4:
+                regime_idx = 0 if dyn_ratio <= 0.18 else (1 if dyn_ratio <= 0.38 else (2 if dyn_ratio <= 0.63 else 3))
+            else:
+                regime_idx = 2 if dyn_ratio <= 0.35 else (0 if dyn_ratio <= 0.60 else 1)
             regime_stacked = self.regimes.get(regime_idx)
             stacked_parameters = {
                 k: v.to(vehicles.device) for k, v in regime_stacked.items()

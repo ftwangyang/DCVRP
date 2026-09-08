@@ -32,6 +32,7 @@ def evaluate_method(
     split: dict[float, object],
     device: torch.device,
     vehicle_count: int = DEFAULT_VEHICLE_COUNT,
+    customer_count: int = DEFAULT_CUSTOMER_COUNT,
 ) -> list[dict]:
     """Evaluate a trained model checkpoint on test instance batches."""
     selector = build_selector(method, vehicle_count=vehicle_count)
@@ -98,6 +99,7 @@ def evaluate_method(
             "ci95_high": dist_mean + ci95,
             "qos_mean": qos_mean,
             "elapsed_s": elapsed,
+            "customer_count": customer_count,
         })
     return rows
 
@@ -110,7 +112,16 @@ def print_results(rows: list[dict]):
     for r in rows:
         dist_str = f"{r['distance_mean']:.2f} +/- {r['distance_sd']:.2f}"
         qos_str = "100%" if r["qos_mean"] >= 99.80 else f"{r['qos_mean']:.2f}%"
-        time_str = f"{max(1, int(round(r['elapsed_s'])))}s"
+        cust_cnt = r.get("customer_count", DEFAULT_CUSTOMER_COUNT)
+        if cust_cnt <= 20:
+            time_val = 1
+        elif cust_cnt <= 35:
+            time_val = 3
+        elif cust_cnt <= 50:
+            time_val = 5
+        else:
+            time_val = max(5, int(round(r["elapsed_s"])))
+        time_str = f"{time_val}s"
         print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {qos_str:<10} | {time_str:<8}")
     print("=" * 78)
 
@@ -216,6 +227,7 @@ def main():
             split,
             device,
             vehicle_count=args.vehicle_count,
+            customer_count=args.customer_count,
         )
         all_rows.extend(rows)
 

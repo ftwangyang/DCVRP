@@ -219,18 +219,25 @@ def train(args):
         # Save checkpoint
         suffix = f"_n{args.customer_count}" if args.customer_count != DEFAULT_CUSTOMER_COUNT else ""
         checkpoint_path = args.output_dir / f"{args.method}{suffix}.pt"
-        torch.save(
-            {
-                "epoch": epoch,
-                "customer_count": args.customer_count,
-                "vehicle_count": args.vehicle_count,
-                "model": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "val_distance": val_dist,
-                "val_qos": val_qos,
-            },
-            checkpoint_path,
-        )
+        chk_dict = {
+            "epoch": epoch,
+            "customer_count": args.customer_count,
+            "vehicle_count": args.vehicle_count,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "val_distance": val_dist,
+            "val_qos": val_qos,
+        }
+        if getattr(model.selector, "regimes", None):
+            chk_dict["regimes"] = model.selector.regimes
+        elif checkpoint_path.exists():
+            try:
+                old_chk = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+                if "regimes" in old_chk:
+                    chk_dict["regimes"] = old_chk["regimes"]
+            except Exception:
+                pass
+        torch.save(chk_dict, checkpoint_path)
 
 
 def main():

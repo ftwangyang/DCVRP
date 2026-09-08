@@ -6,6 +6,7 @@ This directory contains the trained neural network model weights for the Dynamic
 
 - `DVNDA.pt`: The proposed DVNDA model with independent dual-attention vehicle selection sub-networks ($n=20, m=4$).
 - `DVNDA_n35.pt`: The proposed DVNDA model for the 35-customer scale ($n=35, m=7$).
+- `DVNDA_n50.pt`: The proposed DVNDA model for the 50-customer scale ($n=50, m=10$).
 - `AMCVN.pt`: AMCVN model with centralized multi-head fleet attention.
 - `LiDRL.pt`: LiDRL model with tour history recurrent vehicle selector.
 - `MAAM.pt`: MAAM model with round-robin dispatch rule.
