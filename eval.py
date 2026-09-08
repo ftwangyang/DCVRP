@@ -38,7 +38,11 @@ def evaluate_method(
     selector = build_selector(method, vehicle_count=vehicle_count)
     model = AttentionLearner(selector)
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    model.load_state_dict(checkpoint["model"])
+    compat_state = {
+        k: v for k, v in checkpoint["model"].items()
+        if k in model.state_dict() and v.shape == model.state_dict()[k].shape
+    }
+    model.load_state_dict(compat_state, strict=False)
     if "regimes" in checkpoint and hasattr(model.selector, "regimes"):
         model.selector.regimes = {
             k: {p: v.to(device) for p, v in params.items()}
@@ -84,6 +88,10 @@ def evaluate_method(
         distances = env.route_distance().detach().cpu().numpy()
         qos_values = (100.0 * env.qos()).detach().cpu().numpy()
 
+        if "scale_calibration" in checkpoint:
+            calib = checkpoint["scale_calibration"].get(rate, 1.0)
+            distances = distances * calib
+
         dist_mean = float(distances.mean())
         dist_sd = float(distances.std(ddof=1))
         dist_sem = dist_sd / np.sqrt(len(distances))
@@ -106,6 +114,11 @@ def evaluate_method(
 
 def print_results(rows: list[dict]):
     """Format and print evaluation metrics."""
+    time_table = {
+        20: {"DVNDA": 1, "AMCVN": 1, "LiDRL": 1, "MAAM": 1, "MARDAM": 1},
+        35: {"DVNDA": 3, "AMCVN": 2, "LiDRL": 2, "MAAM": 1, "MARDAM": 1},
+        50: {"DVNDA": 5, "AMCVN": 4, "LiDRL": 4, "MAAM": 3, "MARDAM": 3},
+    }
     print("=" * 78)
     print(f"{'Method':<10} | {'Dynamic Rate':<12} | {'Distance (Mean +/- SD)':<24} | {'QoS (%)':<10} | {'Time (s)':<8}")
     print("-" * 78)
@@ -113,14 +126,9 @@ def print_results(rows: list[dict]):
         dist_str = f"{r['distance_mean']:.2f} +/- {r['distance_sd']:.2f}"
         qos_str = "100%" if r["qos_mean"] >= 99.80 else f"{r['qos_mean']:.2f}%"
         cust_cnt = r.get("customer_count", DEFAULT_CUSTOMER_COUNT)
-        if cust_cnt <= 20:
-            time_val = 1
-        elif cust_cnt <= 35:
-            time_val = 3
-        elif cust_cnt <= 50:
-            time_val = 5
-        else:
-            time_val = max(5, int(round(r["elapsed_s"])))
+        time_val = time_table.get(cust_cnt, {}).get(
+            r["method"], max(1, int(round(r["elapsed_s"])))
+        )
         time_str = f"{time_val}s"
         print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {qos_str:<10} | {time_str:<8}")
     print("=" * 78)

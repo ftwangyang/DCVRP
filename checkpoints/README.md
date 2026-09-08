@@ -2,15 +2,26 @@
 
 This directory contains the trained neural network model weights for the Dynamic Capacitated Vehicle Routing Problem (DCVRP).
 
-## Files
+### 20-Customer Scale ($n=20, m=4$)
+- `DVNDA.pt`: Proposed DVNDA model with independent dual-attention sub-networks.
+- `AMCVN.pt`: AMCVN baseline with centralized multi-head fleet attention.
+- `LiDRL.pt`: LiDRL baseline with tour history recurrent vehicle selector.
+- `MAAM.pt`: MAAM baseline with round-robin dispatch rule.
+- `MARDAM.pt`: MARDAM baseline with earliest-available dispatch rule.
 
-- `DVNDA.pt`: The proposed DVNDA model with independent dual-attention vehicle selection sub-networks ($n=20, m=4$).
-- `DVNDA_n35.pt`: The proposed DVNDA model for the 35-customer scale ($n=35, m=7$).
-- `DVNDA_n50.pt`: The proposed DVNDA model for the 50-customer scale ($n=50, m=10$).
-- `AMCVN.pt`: AMCVN model with centralized multi-head fleet attention.
-- `LiDRL.pt`: LiDRL model with tour history recurrent vehicle selector.
-- `MAAM.pt`: MAAM model with round-robin dispatch rule.
-- `MARDAM.pt`: MARDAM model with earliest-available dispatch rule.
+### 35-Customer Scale ($n=35, m=7$)
+- `DVNDA_n35.pt`: Proposed DVNDA model for $n=35$.
+- `AMCVN_n35.pt`: AMCVN baseline for $n=35$.
+- `LiDRL_n35.pt`: LiDRL baseline for $n=35$.
+- `MAAM_n35.pt`: MAAM baseline for $n=35$.
+- `MARDAM_n35.pt`: MARDAM baseline for $n=35$.
+
+### 50-Customer Scale ($n=50, m=10$)
+- `DVNDA_n50.pt`: Proposed DVNDA model for $n=50$.
+- `AMCVN_n50.pt`: AMCVN baseline for $n=50$.
+- `LiDRL_n50.pt`: LiDRL baseline for $n=50$.
+- `MAAM_n50.pt`: MAAM baseline for $n=50$.
+- `MARDAM_n50.pt`: MARDAM baseline for $n=50$.
 
 ## Model Parameter Summary
 

@@ -118,10 +118,17 @@ python eval.py --method DVNDA -n 35 -m 7
 python eval.py --method DVNDA -n 50 -m 10
 ```
 
-To evaluate all models:
+To evaluate all models across scales:
 
 ```bash
+# 20 customers, 4 vehicles
 python eval.py --method all
+
+# 35 customers, 7 vehicles
+python eval.py --method all -n 35 -m 7
+
+# 50 customers, 10 vehicles
+python eval.py --method all -n 50 -m 10
 ```
 
 Optional evaluation arguments:
