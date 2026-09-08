@@ -31,12 +31,18 @@ def evaluate_method(
     checkpoint_path: Path,
     split: dict[float, object],
     device: torch.device,
+    vehicle_count: int = DEFAULT_VEHICLE_COUNT,
 ) -> list[dict]:
     """Evaluate a trained model checkpoint on test instance batches."""
-    selector = build_selector(method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+    selector = build_selector(method, vehicle_count=vehicle_count)
     model = AttentionLearner(selector)
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     model.load_state_dict(checkpoint["model"])
+    if "regimes" in checkpoint and hasattr(model.selector, "regimes"):
+        model.selector.regimes = {
+            k: {p: v.to(device) for p, v in params.items()}
+            for k, params in checkpoint["regimes"].items()
+        }
     model.eval()
     model.greedy = True
     model.vehicle_greedy = True
@@ -119,6 +125,20 @@ def parse_args():
         help="Method to evaluate (default: DVNDA, or 'all').",
     )
     parser.add_argument(
+        "-n",
+        "--customer-count",
+        type=int,
+        default=DEFAULT_CUSTOMER_COUNT,
+        help=f"Number of customer locations (default: {DEFAULT_CUSTOMER_COUNT}).",
+    )
+    parser.add_argument(
+        "-m",
+        "--vehicle-count",
+        type=int,
+        default=None,
+        help="Number of vehicles (default: auto-computed as n / 5).",
+    )
+    parser.add_argument(
         "--checkpoint",
         type=Path,
         default=None,
@@ -156,10 +176,17 @@ def main():
     args = parse_args()
     device = torch.device(args.device)
 
-    print(f"Loading test instances (n={DEFAULT_CUSTOMER_COUNT}, m={DEFAULT_VEHICLE_COUNT}, seed={args.seed})...")
+    if args.vehicle_count is None:
+        args.vehicle_count = max(1, round(args.customer_count / 5))
+
+    print(
+        f"Loading test instances (n={args.customer_count}, m={args.vehicle_count}, seed={args.seed})..."
+    )
     split = generate_evaluation_split(
         instances=args.instances,
         dynamic_rates=args.rates,
+        customer_count=args.customer_count,
+        vehicle_count=args.vehicle_count,
         seed=args.seed,
     )
 
@@ -169,13 +196,27 @@ def main():
     for method in methods:
         checkpoint_path = args.checkpoint
         if checkpoint_path is None:
-            checkpoint_path = Path("checkpoints") / f"{method}.pt"
+            if args.customer_count != DEFAULT_CUSTOMER_COUNT:
+                scale_candidate = Path("checkpoints") / f"{method}_n{args.customer_count}.pt"
+                if scale_candidate.exists():
+                    checkpoint_path = scale_candidate
+                else:
+                    checkpoint_path = Path("checkpoints") / f"{method}.pt"
+            else:
+                checkpoint_path = Path("checkpoints") / f"{method}.pt"
+
         if not checkpoint_path.exists():
             print(f"Warning: Checkpoint not found at {checkpoint_path}. Skipping {method}.")
             continue
 
-        print(f"Evaluating {method} on {device}...")
-        rows = evaluate_method(method, checkpoint_path, split, device)
+        print(f"Evaluating {method} on {device} (checkpoint: {checkpoint_path})...")
+        rows = evaluate_method(
+            method,
+            checkpoint_path,
+            split,
+            device,
+            vehicle_count=args.vehicle_count,
+        )
         all_rows.extend(rows)
 
     if all_rows:

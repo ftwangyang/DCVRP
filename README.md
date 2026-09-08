@@ -31,7 +31,8 @@ DCVRP-main/
 │   ├── environment.py       # Time-driven synchronized environment (Eqs. 11-14)
 │   └── dataset.py           # Instance generator with Poisson revelation process
 ├── checkpoints/             # Trained model weights
-│   ├── DVNDA.pt             # Proposed DVNDA model
+│   ├── DVNDA.pt             # Proposed DVNDA model (n=20, m=4)
+│   ├── DVNDA_n35.pt         # Proposed DVNDA model (n=35, m=7)
 │   ├── AMCVN.pt             # AMCVN baseline model
 │   ├── LiDRL.pt             # LiDRL baseline model
 │   ├── MAAM.pt              # MAAM baseline model
@@ -106,7 +107,11 @@ pip install -r requirements.txt
 To evaluate the pretrained **DVNDA** model on 100 evaluation instances across all dynamic rates ($\phi \in \{0.10, 0.25, 0.50, 0.75\}$):
 
 ```bash
+# 20 customers, 4 vehicles (default)
 python eval.py --method DVNDA
+
+# 35 customers, 7 vehicles
+python eval.py --method DVNDA -n 35 -m 7
 ```
 
 To evaluate all models:
@@ -116,6 +121,8 @@ python eval.py --method all
 ```
 
 Optional evaluation arguments:
+- `-n`, `--customer-count`: Number of customer locations (default: `20`).
+- `-m`, `--vehicle-count`: Number of vehicles (default: auto-computed as $n/5$).
 - `--instances`: Number of evaluation instances per dynamic rate (default: `100`).
 - `--seed`: Random seed for test instance generation (default: `20260821`).
 - `--rates`: Dynamic customer rates to evaluate (default: `0.10 0.25 0.50 0.75`).
@@ -126,7 +133,11 @@ Optional evaluation arguments:
 To train the DVNDA model using REINFORCE with the Rollout Baseline:
 
 ```bash
+# Train on n=20, m=4
 python train.py --method DVNDA --epochs 100 --batch-size 100 --lr 0.0001
+
+# Train on n=35, m=7
+python train.py --method DVNDA -n 35 -m 7 --epochs 100 --batch-size 50 --lr 0.0001
 ```
 
 Checkpoints will be saved automatically to `checkpoints/`.

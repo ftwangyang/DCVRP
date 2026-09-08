@@ -39,8 +39,15 @@ from models import AttentionLearner, build_selector
 class RolloutBaseline:
     """Greedy rollout baseline for REINFORCE variance reduction."""
 
-    def __init__(self, model: AttentionLearner, dataset, device: torch.device, method: str):
-        selector = build_selector(method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+    def __init__(
+        self,
+        model: AttentionLearner,
+        dataset,
+        device: torch.device,
+        method: str,
+        vehicle_count: int = DEFAULT_VEHICLE_COUNT,
+    ):
+        selector = build_selector(method, vehicle_count=vehicle_count)
         self.model = AttentionLearner(selector).to(device)
         self.model.load_state_dict(model.state_dict())
         self.model.eval()
@@ -49,6 +56,7 @@ class RolloutBaseline:
         self.dataset = dataset
         self.device = device
         self.method = method
+        self.vehicle_count = vehicle_count
 
     @torch.no_grad()
     def eval(self, data, device: torch.device) -> torch.Tensor:
@@ -60,7 +68,7 @@ class RolloutBaseline:
     def validate_and_update(
         self, candidate: AttentionLearner, val_data, alpha: float = 0.05
     ) -> bool:
-        selector = build_selector(self.method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+        selector = build_selector(self.method, vehicle_count=self.vehicle_count)
         candidate_eval = AttentionLearner(selector).to(self.device)
         candidate_eval.load_state_dict(candidate.state_dict())
         candidate_eval.eval()
@@ -86,6 +94,20 @@ class RolloutBaseline:
 def parse_args():
     parser = argparse.ArgumentParser(description="Train DCVRP models.")
     parser.add_argument("--method", type=str, default="DVNDA", help="Vehicle selection method (default: DVNDA).")
+    parser.add_argument(
+        "-n",
+        "--customer-count",
+        type=int,
+        default=DEFAULT_CUSTOMER_COUNT,
+        help=f"Number of customer locations (default: {DEFAULT_CUSTOMER_COUNT}).",
+    )
+    parser.add_argument(
+        "-m",
+        "--vehicle-count",
+        type=int,
+        default=None,
+        help="Number of vehicles (default: auto-computed as n / 5).",
+    )
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs (default: 100).")
     parser.add_argument("--steps-per-epoch", type=int, default=100, help="Steps per epoch (default: 100).")
     parser.add_argument("--batch-size", type=int, default=100, help="Training batch size (default: 100).")
@@ -103,8 +125,11 @@ def train(args):
     device = torch.device(args.device)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Initializing {args.method} model on {device}...")
-    selector = build_selector(args.method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+    if args.vehicle_count is None:
+        args.vehicle_count = max(1, round(args.customer_count / 5))
+
+    print(f"Initializing {args.method} model (n={args.customer_count}, m={args.vehicle_count}) on {device}...")
+    selector = build_selector(args.method, vehicle_count=args.vehicle_count)
     model = AttentionLearner(
         selector=selector,
         customer_feature_size=5,
@@ -120,10 +145,18 @@ def train(args):
 
     val_dataset = generate_dataset(
         batch_size=args.val_size,
+        customer_count=args.customer_count,
+        vehicle_count=args.vehicle_count,
         dynamic_rate=0.5,
         seed=args.seed + 9999,
     )
-    baseline = RolloutBaseline(model, val_dataset, device, args.method)
+    baseline = RolloutBaseline(
+        model,
+        val_dataset,
+        device,
+        args.method,
+        vehicle_count=args.vehicle_count,
+    )
 
     best_val_return = -float("inf")
 
@@ -136,7 +169,12 @@ def train(args):
 
         for step in range(1, args.steps_per_epoch + 1):
             rate = float(DEFAULT_DYNAMIC_RATES[step % len(DEFAULT_DYNAMIC_RATES)])
-            data = generate_dataset(batch_size=args.batch_size, dynamic_rate=rate)
+            data = generate_dataset(
+                batch_size=args.batch_size,
+                customer_count=args.customer_count,
+                vehicle_count=args.vehicle_count,
+                dynamic_rate=rate,
+            )
 
             env = DCVRPEnvironment(data, nodes=data.nodes.to(device), pending_cost=5.0)
             _, log_probabilities, rewards = model(env)
@@ -165,7 +203,7 @@ def train(args):
 
         with torch.no_grad():
             env_val = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(device), pending_cost=0.0)
-            eval_sel = build_selector(args.method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+            eval_sel = build_selector(args.method, vehicle_count=args.vehicle_count)
             model_eval = AttentionLearner(eval_sel).to(device)
             model_eval.load_state_dict(model.state_dict())
             model_eval.eval()
@@ -179,10 +217,13 @@ def train(args):
         print(f"Epoch {epoch:3d}/{args.epochs} | Loss: {avg_loss:8.4f} | Val Dist: {val_dist:6.2f} | Val QoS: {val_qos:5.1f}% | Time: {epoch_time:5.1f}s{update_str}")
 
         # Save checkpoint
-        checkpoint_path = args.output_dir / f"{args.method}.pt"
+        suffix = f"_n{args.customer_count}" if args.customer_count != DEFAULT_CUSTOMER_COUNT else ""
+        checkpoint_path = args.output_dir / f"{args.method}{suffix}.pt"
         torch.save(
             {
                 "epoch": epoch,
+                "customer_count": args.customer_count,
+                "vehicle_count": args.vehicle_count,
                 "model": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "val_distance": val_dist,
