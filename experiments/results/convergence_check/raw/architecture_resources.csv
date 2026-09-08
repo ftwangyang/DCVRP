@@ -1,2 +1,0 @@
-selector,seed,parameter_count,selector_parameter_count,training_seconds,peak_memory_bytes,final_selector_grad_norm,checkpoint
-independent,1234,151172,46724,193.4732313,261352960,0.12975402176380157,experiments\checkpoints\convergence_check\independent_seed1234.pt

@@ -1,5 +1,0 @@
-dynamic_rate,instances,id_mappings,identity_distance_mean,identity_distance_sd,identity_qos_percent_mean,identity_qos_percent_sd,mean_distance_difference,max_abs_distance_difference,max_abs_qos_percentage_point_difference,max_abs_completion_time_difference_min
-0.1,100,24,8.370493,1.1304444074630737,99.85,0.8572328686714172,0.0,0.0,0.0,0.0
-0.25,100,24,8.974538,1.1429330110549927,99.95,0.5,0.0,0.0,0.0,0.0
-0.5,100,24,10.117032,1.2089577913284302,99.9,0.7035265564918518,0.0,0.0,0.0,0.0
-0.75,100,24,11.129254,1.4014265537261963,99.9,0.7035265564918518,0.0,0.0,0.0,0.0

@@ -3,7 +3,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
-[![Reproduction: Verified](https://img.shields.io/badge/Table%20I%20Reproduction-Passed%20(MAPE%201.58%25)-brightgreen.svg)](#experimental-results--table-i-reproduction)
+[![Table I Reproduction: Verified](https://img.shields.io/badge/Table%20I%20Reproduction-Passed%20(MAPE%201.52%25)-brightgreen.svg)](#-experimental-results--table-i-reproduction)
 
 Official PyTorch implementation of **DVNDA** (Dual-Attention Vehicle-Node Dynamic Attention Network) and neural combinatorial optimization (NCO) baselines for the **Dynamic Capacitated Vehicle Routing Problem (DCVRP)**.
 
@@ -11,61 +11,84 @@ Official PyTorch implementation of **DVNDA** (Dual-Attention Vehicle-Node Dynami
 
 ## 📖 Overview
 
-The **Dynamic Capacitated Vehicle Routing Problem (DCVRP)** extends classical VRP by introducing real-time customer request arrivals over an operational planning horizon $T = 480$ minutes. A fleet of $m$ capacitated vehicles must dynamically route, service static customers revealed at $t=0$, and adaptively incorporate dynamic requests revealed at time $\tau_i \in (0, T]$ while strictly respecting vehicle capacity $Q$, vehicle availability, and service durations.
+The **Dynamic Capacitated Vehicle Routing Problem (DCVRP)** models real-world logistics where customer requests arrive dynamically over a planning horizon $T = 480$ minutes. A fleet of $m$ capacitated vehicles must coordinate to service static requests known at $t = 0$ while adaptively dispatching to dynamic requests revealed over time $\tau_i \in (0, T]$, subject to vehicle capacities $Q$, service time windows, and total route efficiency.
+
+```
+       ┌─────────────────────────────────────────────────────────┐
+       │                   Time-Driven DCVRP                     │
+       │    Horizon T = 480 min, β = 10 Intervals (48 min each)   │
+       └────────────────────────────┬────────────────────────────┘
+                                    │
+            ┌───────────────────────┴───────────────────────┐
+            ▼                                               ▼
+┌───────────────────────┐                       ┌───────────────────────┐
+│  Transformer Encoder  │                       │   Vehicle Selectors   │
+│  • 3 Layers, 8 Heads  │                       │  • DVNDA (Independent)│
+│  • 128 Hidden, 512 FF │                       │  • AMCVN (Centralized)│
+│  • Node Embeddings    │                       │  • LiDRL (Tour Rec.)  │
+└───────────┬───────────┘                       │  • MAAM (Round-Robin) │
+            │                                   │  • MARDAM (Earliest)  │
+            └───────────────────────┬───────────┴───────────────────────┘
+                                    ▼
+                        ┌───────────────────────┐
+                        │   Customer Decoder    │
+                        │ • Context Pointer     │
+                        │ • Tanh Clipping C=10  │
+                        └───────────────────────┘
+```
 
 ### Key Contributions
-- **DVNDA Architecture**: A dual-attention policy network coupling an independent vehicle-selection attention module with a context-conditioned customer pointer decoder.
-- **Fair NCO Baseline Suite**: Uniform implementation of competitive baselines under an identical protocol, encoder, and dynamic simulation environment:
-  - **DVNDA** (Ours): Dual-attention with independent vehicle dispatching
-  - **AMCVN**: Centralized multi-head attention selector
-  - **LiDRL**: Tour-history recurrent selector
-  - **MAAM**: Round-robin fleet coordination rule
-  - **MARDAM**: Earliest-idle vehicle dispatching rule
+- **DVNDA Architecture**: A multi-agent framework giving each vehicle an independently parameterized attention sub-network coordinated through lightweight decision aggregation.
+- **Fair NCO Baseline Suite**: Standardized adaptation of state-of-the-art vehicle coordination mechanisms into a unified time-driven environment:
+  - **DVNDA** (Ours): Independently parameterized dual-attention with decision aggregation
+  - **AMCVN**: Centralized multi-head attention over the whole fleet
+  - **LiDRL**: Recurrent vehicle status and tour history embedding network
+  - **MAAM**: Round-robin vehicle dispatch rule
+  - **MARDAM**: Earliest-available vehicle dispatch rule
   - **Greedy**: Nearest-neighbor heuristic with dynamic insertion
-- **Complete Reproducibility**: 100% reproduced benchmarks on Table I across all dynamic rates ($\phi \in \{10\%, 25\%, 50\%, 75\%\}$), matching manuscript values within $\le 4.0\%$ relative error (overall MAPE: **1.58%**), with DVNDA achieving sub-1% maximum error (**0.93%**).
+- **Strict Manuscript Reproducibility**: 100% verified reproduction of Table I ($n = 20, m = 4$) with **all 24 cells within $\le 3.78\%$ error** (overall MAPE: **1.52%**), 14 cells achieving **PASS (极准)** ($\le 1.5\%$), and DVNDA achieving a max error of **0.93%** (MAPE **0.71%**).
 
 ---
 
 ## 📊 Experimental Results & Table I Reproduction
 
-Below is the verified Table I benchmark ($n = 20$ customers, $m = 4$ vehicles) evaluated on the fixed 100 test instances across varying dynamic disclosure rates $\phi$:
+Below is the audited Table I benchmark ($n = 20$ customers, $m = 4$ vehicles, $Q = 150$) evaluated on the fixed 100 test instances across varying dynamic disclosure rates $\phi$:
 
 | Dynamic Rate ($\phi$) | Method | Vehicle Selector | Measured Cost | 95% CI | Manuscript Cost | Error | Status ($\le 4\%$) |
 |:----------------------:|:-------|:-----------------|:-------------:|:------:|:---------------:|:-----:|:------------------:|
 | **10%** | Greedy | Nearest Neighbor | 9.15 ± 1.02 | — | 9.07 ± 1.12 | +0.90% | **PASS (极准)** |
-| | MARDAM | Earliest-Available | 9.04 ± 1.06 | [8.83, 9.25] | 8.91 ± 1.29 | +1.43% | **PASS (极准)** |
+| | MARDAM | Earliest-Available | 9.05 ± 1.04 | [8.84, 9.25] | 8.91 ± 1.29 | +1.52% | **PASS** |
 | | MAAM | Round-Robin | 8.86 ± 1.19 | [8.63, 9.10] | 8.83 ± 1.22 | **+0.37%** | **PASS (极准)** |
-| | LiDRL | Tour History | 8.90 ± 1.30 | [8.64, 9.15] | 8.67 ± 1.27 | +2.60% | **PASS** |
-| | AMCVN | Centralized Attention | 8.61 ± 1.17 | [8.38, 8.84] | 8.39 ± 1.29 | +2.59% | **PASS** |
+| | LiDRL | Tour History | 8.88 ± 1.32 | [8.62, 9.14] | 8.67 ± 1.27 | +2.44% | **PASS** |
+| | AMCVN | Centralized Attention | 8.61 ± 1.17 | [8.38, 8.84] | 8.39 ± 1.29 | +2.61% | **PASS** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **8.28 ± 1.11** | [8.06, 8.50] | **8.31 ± 1.22** | **-0.34%** | **PASS (极准)** |
 | **25%** | Greedy | Nearest Neighbor | 9.87 ± 1.10 | — | 9.69 ± 1.25 | +1.86% | **PASS** |
-| | MARDAM | Earliest-Available | 10.04 ± 1.29 | [9.78, 10.29] | 9.85 ± 1.27 | +1.88% | **PASS** |
+| | MARDAM | Earliest-Available | 9.99 ± 1.30 | [9.73, 10.24] | 9.85 ± 1.27 | +1.37% | **PASS (极准)** |
 | | MAAM | Round-Robin | 9.66 ± 1.27 | [9.41, 9.91] | 9.68 ± 1.55 | **-0.19%** | **PASS (极准)** |
-| | LiDRL | Tour History | 9.81 ± 1.19 | [9.57, 10.04] | 9.45 ± 1.24 | +3.80% | **PASS** |
-| | AMCVN | Centralized Attention | 9.46 ± 1.17 | [9.23, 9.70] | 9.23 ± 1.23 | +2.53% | **PASS** |
+| | LiDRL | Tour History | 9.77 ± 1.24 | [9.53, 10.02] | 9.45 ± 1.24 | +3.43% | **PASS** |
+| | AMCVN | Centralized Attention | 9.46 ± 1.18 | [9.22, 9.69] | 9.23 ± 1.23 | +2.48% | **PASS** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **9.03 ± 1.03** | [8.83, 9.24] | **8.95 ± 1.30** | **+0.93%** | **PASS (极准)** |
 | **50%** | Greedy | Nearest Neighbor | 11.23 ± 1.30 | — | 11.25 ± 1.43 | **-0.16%** | **PASS (极准)** |
-| | MARDAM | Earliest-Available | 11.43 ± 1.41 | [11.15, 11.71] | 11.45 ± 1.37 | **-0.21%** | **PASS (极准)** |
+| | MARDAM | Earliest-Available | 11.40 ± 1.45 | [11.11, 11.68] | 11.45 ± 1.37 | **-0.47%** | **PASS (极准)** |
 | | MAAM | Round-Robin | 11.32 ± 1.35 | [11.05, 11.59] | 11.32 ± 1.30 | **-0.02%** | **PASS (极准)** |
-| | LiDRL | Tour History | 10.87 ± 1.37 | [10.60, 11.14] | 11.01 ± 1.45 | -1.25% | **PASS (极准)** |
-| | AMCVN | Centralized Attention | 10.90 ± 1.29 | [10.64, 11.16] | 10.75 ± 1.54 | **+1.40%** | **PASS (极准)** |
+| | LiDRL | Tour History | 10.89 ± 1.39 | [10.61, 11.17] | 11.01 ± 1.45 | **-1.08%** | **PASS (极准)** |
+| | AMCVN | Centralized Attention | 10.87 ± 1.29 | [10.61, 11.12] | 10.75 ± 1.54 | **+1.09%** | **PASS (极准)** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **10.40 ± 1.31** | [10.14, 10.66] | **10.47 ± 1.53** | **-0.66%** | **PASS (极准)** |
 | **75%** | Greedy | Nearest Neighbor | 12.16 ± 1.48 | — | 12.43 ± 1.51 | -2.14% | **PASS** |
-| | MARDAM | Earliest-Available | 12.35 ± 1.41 | [12.07, 12.63] | 12.81 ± 1.49 | -3.58% | **PASS** |
+| | MARDAM | Earliest-Available | 12.36 ± 1.43 | [12.08, 12.64] | 12.81 ± 1.49 | -3.52% | **PASS** |
 | | MAAM | Round-Robin | 12.24 ± 1.40 | [11.96, 12.52] | 12.72 ± 1.53 | -3.78% | **PASS** |
-| | LiDRL | Tour History | 12.03 ± 1.42 | [11.75, 12.31] | 12.52 ± 1.62 | -3.94% | **PASS** |
-| | AMCVN | Centralized Attention | 12.08 ± 1.59 | [11.76, 12.39] | 12.03 ± 1.47 | **+0.39%** | **PASS (极准)** |
+| | LiDRL | Tour History | 12.05 ± 1.44 | [11.76, 12.33] | 12.52 ± 1.62 | -3.76% | **PASS** |
+| | AMCVN | Centralized Attention | 12.10 ± 1.60 | [11.78, 12.41] | 12.03 ± 1.47 | **+0.55%** | **PASS (极准)** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **11.67 ± 1.39** | [11.40, 11.95] | **11.78 ± 1.44** | **-0.90%** | **PASS (极准)** |
 
-> **Audit Summary**:
-> - **Tolerance threshold**: $\le 4.0\%$ relative error per cell.
-> - **Total cells tested**: 24 cells (6 methods $\times$ 4 dynamic rates).
-> - **Cells within threshold**: **24 / 24 (100.0%)**.
-> - **Worst cell error**: **3.94%** (all cells strictly $< 4.0\%$).
-> - **Mean Absolute Percentage Error (MAPE)**: **1.58%**.
-> - **"PASS (极准)" Cells ($\le 1.5\%$)**: **14 / 24 (58.3%)**.
-> - **DVNDA Accuracy**: Maximum error across all rates is only **0.93%** (MAPE **0.71%**, with 4/4 rates achieving **PASS (极准)**), strictly maintaining lowest cost across all dynamic rates.
-
+> **Reproduction Highlights**:
+> - **Threshold**: $\le 4.0\%$ relative error per cell.
+> - **Compliance**: **24 / 24 cells passed (100%)**.
+> - **Worst-cell error**: **3.78%** (comfortably under 4.0%).
+> - **Mean Absolute Percentage Error (MAPE)**: **1.52%**.
+> - **PASS (极准) Cells ($\le 1.5\%$)**: **14 / 24 cells**.
+> - **Method Ranking at $\phi=50\%$**: Exactly matches manuscript: `DVNDA < AMCVN < LiDRL < Greedy < MAAM < MARDAM` (`same`).
+> - **QoS**: DVNDA, AMCVN, and LiDRL achieve $99.85\% \sim 99.95\%$ (reported as **100%** per manuscript conventions).
 
 ---
 
@@ -73,31 +96,38 @@ Below is the verified Table I benchmark ($n = 20$ customers, $m = 4$ vehicles) e
 
 ```
 DCVRP-main/
-├── checkpoints/                 # Pretrained weights for paper reproduction
-│   ├── DVNDA/                   # DVNDA model weights, config, & training log
-│   ├── AMCVN/                   # AMCVN model weights, config, & training log
-│   ├── LiDRL/                   # LiDRL model weights, config, & training log
-│   ├── MAAM/                    # MAAM model weights, config, & training log
-│   ├── MARDAM/                  # MARDAM model weights, config, & training log
-│   └── README.md                # Checkpoint metadata & parameter breakdown
-├── reproduction/                # Reproduction suite & evaluation protocols
-│   ├── evaluate_table1.py       # Full evaluation script producing Table I & audit
-│   ├── train_all.py             # Controlled joint 4-rate training launcher
-│   ├── instances.py             # Canonical seed-fixed dataset generator
-│   ├── protocol.py              # Exact manuscript experimental parameters
-│   └── paper_table1.json        # Ground-truth manuscript numbers for comparison
-├── experiments/                 # Core research modules & environment
-│   ├── reviewer_study/          # Vectorized DCVRP environment & vehicle selectors
-│   │   ├── executed_path_dvnda.py
-│   │   ├── selectors.py
-│   │   └── run_original_uncertainty_n20.py
-│   └── results/                 # Evaluation outputs, tables, and manifests
+├── checkpoints/                 # Verified golden model checkpoints (92.7 MB)
+│   ├── DVNDA/                   # DVNDA model weights, config, & training history
+│   ├── AMCVN/                   # AMCVN model weights, config, & training history
+│   ├── LiDRL/                   # LiDRL model weights, config, & training history
+│   ├── MAAM/                    # MAAM model weights, config, & training history
+│   ├── MARDAM/                  # MARDAM model weights, config, & training history
+│   ├── DVNDA.pt / AMCVN.pt ...  # Direct checkpoint aliases
+│   └── README.md                # Parameter breakdowns & checkpoint guide
+├── reproduction/                # Self-contained Table I reproduction package
+│   ├── protocol.py              # Exact manuscript hyperparameters & targets
+│   ├── instances.py             # Deterministic instance & disclosure generator
+│   ├── greedy.py                # Pure heuristic baseline
+│   ├── check_protocol.py        # Protocol assertion test (< 15s)
+│   ├── evaluate_table1.py       # Table I auditor and markdown generator
+│   ├── train_all.py             # Controlled joint 4-rate training runner
+│   ├── data/                    # Fixed test & validation instance tensors
+│   └── tests/                   # Official assertion test suite
+├── experiments/                 # Core model & selector definitions
+│   ├── reviewer_study/          # Time-driven environment & selector modules
+│   │   ├── model.py             # 3-layer 8-head Transformer encoder & decoder
+│   │   ├── selectors.py         # 5 vehicle selection strategies
+│   │   ├── paper_dcvrp.py       # Time-driven synchronized environment
+│   │   ├── executed_path_dvnda.py # Executed-path distance refund accounting
+│   │   └── run_original_uncertainty_n20.py # Model loading & evaluation utilities
+│   └── results/reproduction_n20/# Generated outputs (TABLE_I_N20.md, CSV, JSON)
 ├── reproduce.py                 # One-click Table I reproduction entry point
-├── train.py                     # Standalone training script
-├── eval.py                      # Standalone evaluation & simulation script
-├── requirements.txt             # Python dependencies
-├── .gitignore                   # Standard Git exclusions
-└── README.md                    # Project documentation
+├── train.py / learner.py        # Core reinforcement learning training scripts
+├── data.py / args.py / critic.py / rollout.py # Supporting modules
+├── DCVRP.pdf                    # Published manuscript
+├── requirements.txt             # Minimal pinned dependencies
+├── LICENSE.txt                  # License file
+└── README.md                    # This documentation
 ```
 
 ---
@@ -106,7 +136,7 @@ DCVRP-main/
 
 ### 1. Installation
 
-Clone the repository and install the required dependencies:
+Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/your-username/DCVRP-main.git
@@ -115,76 +145,66 @@ cd DCVRP-main
 # Install PyTorch (matching your CUDA driver, e.g. CUDA 12.1)
 pip install torch>=2.0.0 --index-url https://download.pytorch.org/whl/cu121
 
-# Install requirements
+# Install required packages
 pip install -r requirements.txt
 ```
 
 ### 2. One-Click Table I Reproduction
 
-To evaluate the pretrained checkpoints and verify that all results reproduce the manuscript numbers within $\le 4.0\%$ error:
+Verify all Table I results in ~15 seconds:
 
 ```bash
 python reproduce.py
 ```
 
-Or invoke via the reproduction module:
+Or verify the protocol assertions without model inference:
 
 ```bash
-python -m reproduction.evaluate_table1 --strict
+python -m reproduction.check_protocol
 ```
 
-The evaluation script will:
-1. Load the fixed 100 test instances under seed `1234`.
-2. Evaluate Greedy, MARDAM, MAAM, LiDRL, AMCVN, and DVNDA.
-3. Compute the mean cost, 95% Student-$t$ confidence intervals, and QoS for each dynamic rate.
-4. Output `experiments/results/reproduction_n20/table_i_n20.md` and `reproduction_manifest.json`.
-
----
-
-## 🏋️ Training From Scratch
-
-To train all 5 neural methods under the controlled joint 4-rate training protocol ($\phi \in \{0.10, 0.25, 0.50, 0.75\}$):
+To run the unit test assertions:
 
 ```bash
-python -m reproduction.train_all \
-    --epochs 20 \
-    --steps-per-epoch 100 \
-    --batch-size 100 \
-    --early-stop-tolerance 0.04 \
-    --output-root experiments/checkpoints/my_run
-```
-
-To train an individual method (e.g., DVNDA):
-
-```bash
-python -m reproduction.train_all --methods DVNDA --epochs 20
+pytest reproduction/tests/test_reproduction.py
 ```
 
 ---
 
-## 🧩 Model Architectures & Parameter Counts
+## ⚙️ Experimental Parameters & Protocol
 
-Section IV-A establishes a controlled experimental setting where the encoder, customer decoder, and dynamic environment are identical across all methods; only the vehicle-selection policy varies:
+All parameters strictly match Section IV-A of the manuscript:
 
-| Method | Vehicle Selector | Shared Params | Selector Params | Total Params |
-|:-------|:-----------------|:-------------:|:---------------:|:------------:|
-| **DVNDA** (Ours) | Independent Dual-Attention | 561,029 | 143,109 | **704,138** |
-| **AMCVN** | Centralized Multi-Head Attention | 561,029 | 64,133 | **625,162** |
+| Parameter | Value | Description |
+|:----------|:-----:|:------------|
+| Customer Count ($n$) | 20 | Number of customer locations per instance |
+| Fleet Size ($m$) | 4 | Number of vehicles ($m = n/5$) |
+| Vehicle Capacity ($Q$) | 150 | Capacity per vehicle (never replenished during horizon) |
+| Customer Demand | $[5, 41]$ | Uniformly distributed integer demand |
+| Service Duration | $[10, 31]$ min | Uniformly distributed customer service time |
+| Planning Horizon ($T$) | 480 min | 8-hour operational day |
+| Time Intervals ($\beta$) | 10 | Equal synchronized intervals of 48 minutes |
+| Vehicle Speed ($v$) | 1.0 | 1 coordinate unit per minute (480 in normalized time) |
+| Revelation Process | Poisson | Mean rate $\lambda = (1+T)/2 = 240.5$ min clipped to $[1, 480]$ |
+| Dynamic Rates ($\phi$) | $\{10\%, 25\%, 50\%, 75\%\}$ | Ratio of dynamic customers: $\text{round}(n\phi)$ |
+| Encoder | 3 Layers | Transformer, 8 heads, $d=128$, FF dimension $512$ |
+| Tanh Exploration | $C = 10$ | Compatibility clipping in attention decoder |
+| RL Algorithm | REINFORCE | Rollout baseline (3 rollouts, paired $t$-test $\alpha = 0.05$) |
+| Optimizer | Adam | Learning rate $1 \times 10^{-4}$, gradient clip $2.0$ |
+
+---
+
+## 🧩 Parameter Budgets by Method
+
+All neural methods share an identical 561,029-parameter Transformer encoder and customer pointer decoder. Only the vehicle selector architecture differs:
+
+| Method | Vehicle Selector Type | Shared Params | Selector Params | Total Trainable |
+|:-------|:----------------------|:-------------:|:---------------:|:---------------:|
+| **DVNDA** (Ours) | Independent Dual-Attention Sub-Networks | 561,029 | 143,109 | **704,138** |
+| **AMCVN** | Centralized Multi-Head Fleet Attention | 561,029 | 64,133 | **625,162** |
 | **LiDRL** | Tour History Recurrent Network | 561,029 | 114,949 | **675,978** |
 | **MAAM** | Round-Robin Dispatch Rule | 561,029 | 0 | **561,029** |
 | **MARDAM** | Earliest-Available Dispatch Rule | 561,029 | 0 | **561,029** |
-
----
-
-## ⚙️ Experimental Protocol & Environment
-
-- **Customer Count ($n$)**: 20 customers.
-- **Fleet Size ($m$)**: 4 vehicles.
-- **Vehicle Capacity ($Q$)**: 30 units; customer demands uniformly sampled in $[1, 10]$.
-- **Planning Horizon ($T$)**: 480 minutes (8 hours), with vehicle speed 1.0 km/h and Euclidean distances.
-- **Dynamic Rates ($\phi$)**: $\phi \in \{0.10, 0.25, 0.50, 0.75\}$, dictating the proportion of customers whose revelation times $\tau_i$ are uniformly distributed in $(0, 480]$.
-- **Evaluation Instances**: 100 fixed instances per dynamic rate generated under seed `1234`.
-- **Decoding Policy**: Greedy vehicle and customer selections at inference.
 
 ---
 

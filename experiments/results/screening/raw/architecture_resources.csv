@@ -1,5 +1,0 @@
-selector,seed,parameter_count,selector_parameter_count,training_seconds,peak_memory_bytes,final_selector_grad_norm,checkpoint
-shared,1234,116129,11681,36.387572999999996,127244800,0.025143058970570564,experiments\checkpoints\screening\shared_seed1234.pt
-shared,2345,116129,11681,35.4967579,127766016,0.01726403459906578,experiments\checkpoints\screening\shared_seed2345.pt
-independent,1234,151172,46724,33.126648700000004,123143680,0.040785547345876694,experiments\checkpoints\screening\independent_seed1234.pt
-independent,2345,151172,46724,35.480300099999994,130440704,0.0670560747385025,experiments\checkpoints\screening\independent_seed2345.pt

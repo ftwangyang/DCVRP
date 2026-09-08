@@ -1,5 +1,0 @@
-alns==7.0.0
-numpy==2.0.2
-ortools==9.10.4067
-pandas==2.3.3
-scipy==1.13.1

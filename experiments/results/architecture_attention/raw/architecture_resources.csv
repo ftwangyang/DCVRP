@@ -1,4 +1,0 @@
-selector,seed,parameter_count,selector_parameter_count,training_seconds,peak_memory_bytes,final_selector_grad_norm,best_epoch,best_validation_cost,checkpoint
-attention_aggregation,1234,116385,11937,166.4108516,135276544,0.04151584580540657,1,37.03357696533203,experiments\checkpoints\architecture\attention_aggregation_seed1234.pt
-attention_aggregation,2345,116385,11937,161.5893507,147446784,0.007666345685720444,3,54.62977600097656,experiments\checkpoints\architecture\attention_aggregation_seed2345.pt
-attention_aggregation,3456,116385,11937,167.19948499999998,135264768,0.03446733206510544,8,32.022979736328125,experiments\checkpoints\architecture\attention_aggregation_seed3456.pt
