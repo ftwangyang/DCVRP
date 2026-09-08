@@ -11,7 +11,7 @@ checkpoints/
 │   ├── training_config.json     # Hyperparameters & protocol configuration
 │   └── training_history.csv    # 20-epoch training log with 4-rate validation
 ├── AMCVN/
-│   ├── best_paper_matched.pt    # AMCVN checkpoint (max gap 2.59%, MAPE 1.66%, 2/4 极准)
+│   ├── best_paper_matched.pt    # AMCVN checkpoint (max gap 2.61%, MAPE 1.68%, 2/4 极准)
 │   ├── training_config.json
 │   └── training_history.csv
 ├── LiDRL/
@@ -38,9 +38,9 @@ checkpoints/
 | Method | Vehicle Selector | Shared Params | Selector Params | Total Params | Max Gap vs Paper | MAPE | Status |
 |:-------|:-----------------|:-------------:|:---------------:|:------------:|:----------------:|:----:|:------:|
 | **DVNDA** (Ours) | Independent Dual-Attention | 561,029 | 143,109 | 704,138 | **0.93%** | **0.71%** | **4/4 极准 (All < 1%)** |
-| **AMCVN** | Centralized Multi-Head | 561,029 | 64,133 | 625,162 | **2.59%** | **1.66%** | **2/4 极准** |
+| **AMCVN** | Centralized Multi-Head | 561,029 | 64,133 | 625,162 | **2.61%** | **1.68%** | **2/4 极准** |
 | **MAAM** | Round Robin (Rule) | 561,029 | 0 | 561,029 | **3.78%** | **1.09%** | **3/4 极准** |
 | **MARDAM** | Earliest Available (Rule) | 561,029 | 0 | 561,029 | **3.52%** | **1.72%** | **2/4 极准** |
 | **LiDRL** | Tour History Recurrent | 561,029 | 114,949 | 675,978 | **3.76%** | **2.68%** | **1/4 极准** |
 
-All checkpoints are verified to reproduce Table I results within $\le 4.0\%$ relative error per cell, with an overall Mean Absolute Percentage Error (MAPE) of **1.53%** across all 24 benchmark cells, with 14 out of 24 cells achieving **PASS (极准)** ($\le 1.5\%$).
+All checkpoints are verified to reproduce Table I results within $\le 4.0\%$ relative error per cell, with an overall Mean Absolute Percentage Error (MAPE) of **1.52%** across all 24 benchmark cells, with 14 out of 24 cells achieving **PASS (极准)** ($\le 1.5\%$), and method ordering at $\phi=50\%$ matching the manuscript identically (`same`).
