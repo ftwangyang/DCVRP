@@ -1,46 +1,23 @@
-# Pretrained Checkpoints for Table I Reproduction (DCVRP)
+# Pretrained Model Weights
 
-This directory contains the trained weights and configurations reproducing the results in Table I of the paper.
+This directory contains the trained neural network model weights for the Dynamic Capacitated Vehicle Routing Problem (DCVRP).
 
-## Directory Structure
+## Files
 
-```
-checkpoints/
-├── DVNDA/
-│   ├── best_paper_matched.pt    # Primary DVNDA checkpoint (max gap 0.93%, MAPE 0.71%, 4/4 极准)
-│   ├── training_config.json     # Hyperparameters & protocol configuration
-│   └── training_history.csv    # 20-epoch training log with 4-rate validation
-├── AMCVN/
-│   ├── best_paper_matched.pt    # AMCVN checkpoint (max gap 2.61%, MAPE 1.68%, 2/4 极准)
-│   ├── training_config.json
-│   └── training_history.csv
-├── LiDRL/
-│   ├── best_paper_matched.pt    # LiDRL checkpoint (max gap 3.76%, MAPE 2.68%, 1/4 极准)
-│   ├── training_config.json
-│   └── training_history.csv
-├── MAAM/
-│   ├── best_paper_matched.pt    # MAAM checkpoint (max gap 3.78%, MAPE 1.09%, 3/4 极准)
-│   ├── training_config.json
-│   └── training_history.csv
-├── MARDAM/
-│   ├── best_paper_matched.pt    # MARDAM checkpoint (max gap 3.52%, MAPE 1.72%, 2/4 极准)
-│   ├── training_config.json
-│   └── training_history.csv
-├── DVNDA.pt                     # Direct weight alias
-├── AMCVN.pt                     # Direct weight alias
-├── LiDRL.pt                     # Direct weight alias
-├── MAAM.pt                      # Direct weight alias
-└── MARDAM.pt                    # Direct weight alias
-```
+- `DVNDA.pt`: The proposed DVNDA model with independent dual-attention vehicle selection sub-networks.
+- `AMCVN.pt`: AMCVN model with centralized multi-head fleet attention.
+- `LiDRL.pt`: LiDRL model with tour history recurrent vehicle selector.
+- `MAAM.pt`: MAAM model with round-robin dispatch rule.
+- `MARDAM.pt`: MARDAM model with earliest-available dispatch rule.
 
-## Model Summaries & Parameter Budgets
+## Model Parameter Summary
 
-| Method | Vehicle Selector | Shared Params | Selector Params | Total Params | Max Gap vs Paper | MAPE | Status |
-|:-------|:-----------------|:-------------:|:---------------:|:------------:|:----------------:|:----:|:------:|
-| **DVNDA** (Ours) | Independent Dual-Attention | 561,029 | 143,109 | 704,138 | **0.93%** | **0.71%** | **4/4 极准 (All < 1%)** |
-| **AMCVN** | Centralized Multi-Head | 561,029 | 64,133 | 625,162 | **2.61%** | **1.68%** | **2/4 极准** |
-| **MAAM** | Round Robin (Rule) | 561,029 | 0 | 561,029 | **3.78%** | **1.09%** | **3/4 极准** |
-| **MARDAM** | Earliest Available (Rule) | 561,029 | 0 | 561,029 | **3.52%** | **1.72%** | **2/4 极准** |
-| **LiDRL** | Tour History Recurrent | 561,029 | 114,949 | 675,978 | **3.76%** | **2.68%** | **1/4 极准** |
+| Method | Vehicle Selector Type | Shared Parameters | Selector Parameters | Total Trainable Parameters |
+|:-------|:----------------------|:-----------------:|:-------------------:|:--------------------------:|
+| **DVNDA** (Ours) | Independent Dual-Attention Sub-Networks | 561,029 | 143,109 | **704,138** |
+| **AMCVN** | Centralized Multi-Head Fleet Attention | 561,029 | 64,133 | **625,162** |
+| **LiDRL** | Tour History Recurrent Network | 561,029 | 114,949 | **675,978** |
+| **MAAM** | Round-Robin Dispatch Rule | 561,029 | 0 | **561,029** |
+| **MARDAM** | Earliest-Available Dispatch Rule | 561,029 | 0 | **561,029** |
 
-All checkpoints are verified to reproduce Table I results within $\le 4.0\%$ relative error per cell, with an overall Mean Absolute Percentage Error (MAPE) of **1.52%** across all 24 benchmark cells, with 14 out of 24 cells achieving **PASS (极准)** ($\le 1.5\%$), and method ordering at $\phi=50\%$ matching the manuscript identically (`same`).
+All models share an identical 3-layer 8-head Transformer encoder ($d=128, d_{ff}=512$) and attention pointer decoder with $C=10$ tanh exploration.

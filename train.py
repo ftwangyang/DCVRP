@@ -1,345 +1,201 @@
+"""Training script for Dynamic Capacitated Vehicle Routing Problem (DCVRP).
+
+Trains deep reinforcement learning models using REINFORCE with a Rollout Baseline.
+Hyperparameters strictly follow Section IV-A of the manuscript:
+- Problem: n=20 customers, m=4 vehicles, Q=150 capacity, T=480 horizon, beta=10 intervals.
+- Network: 3-layer 8-head Transformer encoder (d=128, ff=512), C=10 tanh exploration.
+- Optimization: Adam optimizer with learning rate 1e-4, gradient norm clipping 2.0.
+- RL Algorithm: REINFORCE with Rollout Baseline (update threshold alpha = 0.05).
+"""
+
+from __future__ import annotations
+
+import argparse
+import copy
 import os
 import time
+from pathlib import Path
+
 import torch
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-from torch.optim import Adam
-from torch.optim.lr_scheduler import LambdaLR
+from scipy.stats import ttest_rel
 from torch.nn.utils import clip_grad_norm_
-from itertools import chain, repeat, zip_longest
-from data import DCVRP_Dataset
-from learner import AttentionLearner, DCVRP_Environment
-from rollout import RolloutBaseline
-from critic import CriticBaseline
-from args import parse_args, write_config_file
-from tqdm import tqdm
-import os.path
+from torch.optim import Adam
 
-def save_checkpoint(args, ep, learner, optim, baseline = None, lr_sched = None):
-    checkpoint = {
-            "ep": ep,
-            "model": learner.state_dict(),
-            "optim": optim.state_dict()
-            }
-    if args.rate_decay is not None:
-        checkpoint["lr_sched"] = lr_sched.state_dict()
-    if args.baseline_type == "critic":
-        checkpoint["critic"] = baseline.state_dict()
-    torch.save(checkpoint, os.path.join(args.output_dir, "chkpt_ep{}.pyth".format(ep+1)))
+from env import (
+    DEFAULT_CUSTOMER_COUNT,
+    DEFAULT_DECISION_INTERVALS,
+    DEFAULT_DYNAMIC_RATES,
+    DEFAULT_HORIZON,
+    DEFAULT_VEHICLE_CAPACITY,
+    DEFAULT_VEHICLE_COUNT,
+    DEFAULT_VEHICLE_SPEED,
+    DCVRPEnvironment,
+    generate_dataset,
+    set_seed,
+)
+from models import AttentionLearner, build_selector
 
-def load_checkpoint(args, learner, optim, baseline = None, lr_sched = None):
-    checkpoint = torch.load(args.resume_state)
-    learner.load_state_dict(checkpoint["model"])
-    optim.load_state_dict(checkpoint["optim"])
-    if args.rate_decay is not None:
-        lr_sched.load_state_dict(checkpoint["lr_sched"])
-    if args.baseline_type == "critic":
-        baseline.load_state_dict(checkpoint["critic"])
-    return checkpoint["ep"]
 
-def set_random_seed(seed):
+class RolloutBaseline:
+    """Greedy rollout baseline for REINFORCE variance reduction."""
 
-    if seed is not None:
-        import random
-        import numpy as np
+    def __init__(self, model: AttentionLearner, dataset, device: torch.device, method: str):
+        selector = build_selector(method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+        self.model = AttentionLearner(selector).to(device)
+        self.model.load_state_dict(model.state_dict())
+        self.model.eval()
+        self.model.greedy = True
+        self.model.vehicle_greedy = True
+        self.dataset = dataset
+        self.device = device
+        self.method = method
 
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        print(f"Random seed set to {seed}")
+    @torch.no_grad()
+    def eval(self, data, device: torch.device) -> torch.Tensor:
+        env = DCVRPEnvironment(data, nodes=data.nodes.to(device), pending_cost=5.0)
+        _, _, rewards = self.model(env)
+        return torch.stack(rewards).sum(dim=0)
 
-def reinforce_loss(logprobs, rewards, baseline=None, weights=None,
-                   discount=1.0, reduction='mean'):
+    @torch.no_grad()
+    def validate_and_update(
+        self, candidate: AttentionLearner, val_data, alpha: float = 0.05
+    ) -> bool:
+        selector = build_selector(self.method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+        candidate_eval = AttentionLearner(selector).to(self.device)
+        candidate_eval.load_state_dict(candidate.state_dict())
+        candidate_eval.eval()
+        candidate_eval.greedy = True
+        candidate_eval.vehicle_greedy = True
 
-    if weights is None:
-        weights = repeat(1.0)
+        env_c = DCVRPEnvironment(val_data, nodes=val_data.nodes.to(self.device), pending_cost=5.0)
+        _, _, r_c = candidate_eval(env_c)
+        returns_candidate = torch.stack(r_c).sum(dim=0).squeeze(-1).cpu().numpy()
 
-    if isinstance(rewards, torch.Tensor):
-        if baseline is None:
-            baseline = torch.zeros_like(rewards)
+        env_b = DCVRPEnvironment(val_data, nodes=val_data.nodes.to(self.device), pending_cost=5.0)
+        _, _, r_b = self.model(env_b)
+        returns_baseline = torch.stack(r_b).sum(dim=0).squeeze(-1).cpu().numpy()
 
-        loss = torch.stack([-logp * w for logp, w in zip(logprobs, weights)]).sum(dim=0)
-        loss *= (rewards - baseline.detach())
+        # Higher return (lower cost) is better
+        t_stat, p_val = ttest_rel(returns_candidate, returns_baseline)
+        if returns_candidate.mean() > returns_baseline.mean() and p_val < alpha:
+            self.model.load_state_dict(candidate_eval.state_dict())
+            return True
+        return False
 
-        if baseline.requires_grad:
-            loss += F.smooth_l1_loss(baseline, rewards)
-    else:
-        if baseline is None:
-            baseline = repeat(torch.zeros_like(rewards[0]))
 
-        cumul = torch.zeros_like(rewards[0])
-        vals = []
-        for r in reversed(rewards):
-            cumul = r + discount * cumul
-            vals.append(cumul)
-        vals.reverse()
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train DCVRP models.")
+    parser.add_argument("--method", type=str, default="DVNDA", help="Vehicle selection method (default: DVNDA).")
+    parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs (default: 100).")
+    parser.add_argument("--steps-per-epoch", type=int, default=100, help="Steps per epoch (default: 100).")
+    parser.add_argument("--batch-size", type=int, default=100, help="Training batch size (default: 100).")
+    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate (default: 1e-4).")
+    parser.add_argument("--max-grad-norm", type=float, default=2.0, help="Max gradient norm (default: 2.0).")
+    parser.add_argument("--val-size", type=int, default=100, help="Validation set size (default: 100).")
+    parser.add_argument("--seed", type=int, default=1234, help="Random seed (default: 1234).")
+    parser.add_argument("--output-dir", type=Path, default=Path("checkpoints"), help="Directory to save checkpoints.")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    return parser.parse_args()
 
-        loss = []
-        bl_loss = []
-        for val, logp, bl, w in zip(vals, logprobs, baseline, weights):
-            loss.append(-logp * (val - bl.detach()) * w)
-            if bl.requires_grad:
-                bl_loss.append(F.smooth_l1_loss(bl, val))
 
-        loss = torch.stack(loss).sum(dim=0)
-        if bl_loss:
-            loss += torch.stack(bl_loss).sum(dim=0)
+def train(args):
+    set_seed(args.seed)
+    device = torch.device(args.device)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    if reduction == 'none':
-        return loss
-    elif reduction == 'sum':
-        return loss.sum()
-    else:  # reduction == 'mean'
-        return loss.mean()
+    print(f"Initializing {args.method} model on {device}...")
+    selector = build_selector(args.method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+    model = AttentionLearner(
+        selector=selector,
+        customer_feature_size=5,
+        vehicle_state_size=4,
+        model_size=128,
+        layer_count=3,
+        head_count=8,
+        ff_size=512,
+        tanh_exploration=10.0,
+    ).to(device)
 
-def train_epoch(args, data, Environment, env_params, bl_wrapped_learner,
-                optim, device, ep):
+    optimizer = Adam(model.parameters(), lr=args.lr)
 
-    bl_wrapped_learner.learner.train()
-    loader = DataLoader(data, args.batch_size, True)
-
-    ep_loss = ep_prob = ep_val = ep_bl = ep_norm = 0
-
-    desc = f"Ep.#{ep + 1:>3d}/{args.epoch_count:<3d}"
-    with tqdm(loader, desc=desc) as progress:
-        for minibatch in progress:
-            if data.cust_mask is None:
-                custs, mask = minibatch.to(device), None
-            else:
-                custs, mask = minibatch[0].to(device), minibatch[1].to(device)
-
-            dyna = Environment(data, custs, mask, *env_params)
-            actions, logps, rewards, bl_vals = bl_wrapped_learner(dyna)
-            loss = reinforce_loss(logps, rewards, bl_vals)
-
-            prob = torch.stack(logps).sum(0).exp().mean()
-            val = rewards.mean()
-            bl = bl_vals[0].mean() if bl_vals is not None else 0
-
-            optim.zero_grad()
-            loss.backward()
-
-            grad_norm = 0
-            if args.max_grad_norm is not None:
-                grad_norm = clip_grad_norm_(
-                    chain.from_iterable(grp["params"] for grp in optim.param_groups),
-                    args.max_grad_norm
-                )
-            optim.step()
-
-            postfix = f"l={loss:.4g} p={prob:9.4g} val={val:6.4g} bl={bl:6.4g} |g|={grad_norm:.4g}"
-            progress.set_postfix_str(postfix)
-
-            ep_loss += loss.item()
-            ep_prob += prob.item()
-            ep_val += val.item()
-            ep_bl += bl.item() if isinstance(bl, torch.Tensor) else bl
-            ep_norm += grad_norm
-
-    return tuple(stat / args.iter_count for stat in (ep_loss, ep_prob, ep_val, ep_bl, ep_norm))
-
-def test_epoch(args, test_env, learner, ref_costs):
-
-    learner.eval()
-
-    if args.problem_type[0] == "DCVRP":
-        costs = test_env.nodes.new_zeros(test_env.minibatch_size)
-        for _ in range(100):
-            _, _, rewards = learner(test_env)
-            costs -= torch.stack(rewards).sum(0).squeeze(-1)
-        costs = costs / 100
-    else:
-        _, _, rs = learner(test_env)
-        costs = -torch.stack(rs).sum(dim=0).squeeze(-1)
-
-    mean = costs.mean()
-    std = costs.std()
-    gap = (costs.to(ref_costs.device) / ref_costs - 1).mean()
-
-    print(f"Cost on test dataset: {mean:5.2f} +- {std:5.2f} ({gap:.2%})")
-    return mean.item(), std.item(), gap.item()
-
-def print_val_summary(val_history, epoch=None):
-
-    if not val_history:
-        return
-
-    current_info = f" (interrupted at epoch {epoch + 1})" if epoch is not None else ""
-    print(f"\n{'=' * 80}")
-    print(f"TRAINING {'INTERRUPTED' if epoch is not None else 'COMPLETED'}!")
-    print(f"Final val: {val_history[-1]:.6f}{current_info}")
-
-    print(f"Complete val history:")
-    for i, val in enumerate(val_history):
-        marker = ""
-        if i == 0:
-            marker = " (Initial)"
-        elif i == len(val_history) - 1:
-            marker = " (Final)" if epoch is None else " (Last)"
-        print(f"  Epoch {i + 1}: {val:.6f}{marker}")
-
-    if len(val_history) > 1:
-        total_improvement = val_history[-1] - val_history[0]
-        best_val = max(val_history)
-        worst_val = min(val_history)
-        best_epoch = val_history.index(best_val) + 1
-        worst_epoch = val_history.index(worst_val) + 1
-
-        print(f"Total improvement: {total_improvement:+.6f}")
-        print(f"Best val: {best_val:.6f} (Epoch {best_epoch})")
-        print(f"Worst val: {worst_val:.6f} (Epoch {worst_epoch})")
-    print(f"{'=' * 80}")
-
-def export_train_test_stats(args, start_ep, train_stats, test_stats):
-    fpath = os.path.join(args.output_dir, "loss_gap.csv")
-    with open(fpath, 'a') as f:
-        f.write( (' '.join("{: >16}" for _ in range(9)) + '\n').format(
-            "#EP", "#LOSS", "#PROB", "#VAL", "#BL", "#NORM", "#TEST_MU", "#TEST_STD", "#TEST_GAP"
-            ))
-        for ep, (tr,te) in enumerate( zip_longest(train_stats, test_stats, fillvalue=float('nan')), start = start_ep):
-            f.write( ("{: >16d}" + ' '.join("{: >16.3g}" for _ in range(8)) + '\n').format(
-                ep, *tr, *te))
-
-def save_val_history(args, val_history, interrupted_epoch=None):
-    if not val_history:
-        return
-
-    val_history_path = os.path.join(args.output_dir, "val_history.txt")
-    with open(val_history_path, 'w') as f:
-        title = "Val History (Interrupted Training)" if interrupted_epoch is not None else "Val History Summary"
-        f.write(f"{title}\n")
-        f.write("=" * 50 + "\n")
-
-        for i, val in enumerate(val_history):
-            f.write(f"Epoch {i + 1}: {val:.6f}\n")
-
-        if interrupted_epoch is not None:
-            f.write(f"\nTraining was interrupted at epoch {interrupted_epoch + 1}\n")
-        elif len(val_history) > 1:
-            f.write("\nSummary Statistics:\n")
-            f.write(f"Total improvement: {val_history[-1] - val_history[0]:+.6f}\n")
-            f.write(f"Best val: {max(val_history):.6f} (Epoch {val_history.index(max(val_history)) + 1})\n")
-            f.write(f"Worst val: {min(val_history):.6f} (Epoch {val_history.index(min(val_history)) + 1})\n")
-            f.write(f"Average val: {sum(val_history) / len(val_history):.6f}\n")
-
-    print(f"Val history saved to {val_history_path}")
-
-def main(args):
-    set_random_seed(args.rng_seed)
-    if args.gpu is not None and torch.cuda.is_available():
-        device = torch.device(f"cuda:{args.gpu}")
-    else:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
-
-    verbose_print = print if args.verbose else lambda *a, **k: None
-
-    gen_params = [
-        args.customers_count, args.vehicles_count, args.veh_capa,
-        args.veh_speed, args.min_cust_count, args.loc_range, args.dem_range
-    ]
-
-    verbose_print(f"Generating {args.iter_count * args.batch_size} {args.problem_type.upper()} training samples...",
-                  end=" ", flush=True)
-    train_data = DCVRP_Dataset.generate(args.iter_count * args.batch_size, *gen_params)
-    train_data.normalize()
-    verbose_print("Done.")
-
-    verbose_print(f"Generating {args.test_batch_size} {args.problem_type.upper()} test samples...",
-                  end=" ", flush=True)
-    test_data = DCVRP_Dataset.generate(args.test_batch_size, *gen_params)
-    test_data.normalize()
-    verbose_print("Done.")
-
-    env_params = [args.pending_cost]
-    test_env = DCVRP_Environment(test_data, None, None, *env_params)
-    test_env.nodes = test_env.nodes.to(device)
-
-    verbose_print("Initializing attention model...", end=" ", flush=True)
-    learner = AttentionLearner(
-        DCVRP_Dataset.CUST_FEAT_SIZE,
-        DCVRP_Environment.VEH_STATE_SIZE,
-        args.model_size,
-        args.layer_count,
-        args.head_count,
-        args.ff_size,
-        args.tanh_xplor,
-        veh_count=args.vehicles_count,
-        aggregator_type=args.aggregator_type,
+    val_dataset = generate_dataset(
+        batch_size=args.val_size,
+        dynamic_rate=0.5,
+        seed=args.seed + 9999,
     )
-    learner.to(device)
-    verbose_print("Done.")
+    baseline = RolloutBaseline(model, val_dataset, device, args.method)
 
-    verbose_print(f"Initializing '{args.baseline_type}' baseline...", end=" ", flush=True)
-    baseline_map = {
-        "rollout": lambda: RolloutBaseline(learner, args.rollout_count, args.rollout_threshold),
-        "critic": lambda: CriticBaseline(learner, args.customers_count,
-                                         args.critic_use_qval, args.loss_use_cumul)
-    }
+    best_val_return = -float("inf")
 
-    if args.baseline_type == "rollout":
-        args.loss_use_cumul = True
+    print(f"Starting training for {args.epochs} epochs ({args.steps_per_epoch} steps/epoch, batch size {args.batch_size})...")
+    for epoch in range(1, args.epochs + 1):
+        model.train()
+        model.greedy = False
+        epoch_start = time.perf_counter()
+        total_loss = 0.0
 
-    baseline = baseline_map[args.baseline_type]()
-    baseline.to(device)
-    verbose_print("Done.")
+        for step in range(1, args.steps_per_epoch + 1):
+            rate = float(DEFAULT_DYNAMIC_RATES[step % len(DEFAULT_DYNAMIC_RATES)])
+            data = generate_dataset(batch_size=args.batch_size, dynamic_rate=rate)
 
-    verbose_print("Initializing Adam optimizer...", end=" ", flush=True)
-    optim = Adam(learner.parameters(), args.learning_rate)
-    lr_sched = None
-    if args.rate_decay is not None:
-        lr_sched = LambdaLR(optim, lambda ep: args.learning_rate * args.rate_decay ** ep)
-    verbose_print("Done.")
+            env = DCVRPEnvironment(data, nodes=data.nodes.to(device), pending_cost=5.0)
+            _, log_probabilities, rewards = model(env)
 
-    verbose_print("Creating output dir...", end=" ", flush=True)
-    if args.output_dir is None:
-        timestamp = time.strftime("%y%m%d-%H%M")
-        args.output_dir = f"./output/{args.problem_type.upper()}n{args.customers_count}m{args.vehicles_count}_{timestamp}"
+            policy_returns = torch.stack(rewards).sum(dim=0)  # (B, 1)
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    write_config_file(args, os.path.join(args.output_dir, "args.json"))
-    verbose_print(f"'{args.output_dir}' created.")
+            with torch.no_grad():
+                baseline_returns = baseline.eval(data, device)
 
-    start_ep = 0 if args.resume_state is None else load_checkpoint(
-        args, learner, optim, baseline, lr_sched)
+            advantage = policy_returns - baseline_returns
+            log_prob = torch.stack(log_probabilities).sum(dim=0)
+            loss = -(log_prob * advantage.detach()).mean()
 
-    verbose_print("Running...")
-    train_stats = []
-    test_stats = []
-    val_history = []
+            optimizer.zero_grad()
+            loss.backward()
+            clip_grad_norm_(model.parameters(), args.max_grad_norm)
+            optimizer.step()
 
-    try:
-        for ep in range(start_ep, args.epoch_count):
+            total_loss += loss.item()
 
-            ep_stats = train_epoch(args, train_data, DCVRP_Environment,
-                                   env_params, baseline, optim, device, ep)
-            ep_loss, ep_prob, ep_val, ep_bl, ep_norm = ep_stats
-            train_stats.append(ep_stats)
-            val_history.append(ep_val)
+        epoch_time = time.perf_counter() - epoch_start
+        avg_loss = total_loss / args.steps_per_epoch
 
-            print(f"\nEpoch {ep + 1}/{args.epoch_count} - Val: {ep_val:.6f}")
+        # Evaluate on validation dataset
+        updated = baseline.validate_and_update(model, val_dataset)
 
-            if lr_sched is not None:
-                lr_sched.step()
-            if args.pend_cost_growth is not None:
-                env_params[0] *= args.pend_cost_growth
+        with torch.no_grad():
+            env_val = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(device), pending_cost=0.0)
+            eval_sel = build_selector(args.method, vehicle_count=DEFAULT_VEHICLE_COUNT)
+            model_eval = AttentionLearner(eval_sel).to(device)
+            model_eval.load_state_dict(model.state_dict())
+            model_eval.eval()
+            model_eval.greedy = True
+            model_eval.vehicle_greedy = True
+            model_eval(env_val)
+            val_dist = env_val.route_distance().mean().item()
+            val_qos = env_val.qos().mean().item() * 100.0
 
-            if (ep + 1) % args.checkpoint_period == 0:
-                save_checkpoint(args, ep, learner, optim, baseline, lr_sched)
+        update_str = " [Baseline Updated]" if updated else ""
+        print(f"Epoch {epoch:3d}/{args.epochs} | Loss: {avg_loss:8.4f} | Val Dist: {val_dist:6.2f} | Val QoS: {val_qos:5.1f}% | Time: {epoch_time:5.1f}s{update_str}")
 
-        print_val_summary(val_history)
-        save_val_history(args, val_history)
+        # Save checkpoint
+        checkpoint_path = args.output_dir / f"{args.method}.pt"
+        torch.save(
+            {
+                "epoch": epoch,
+                "model": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "val_distance": val_dist,
+                "val_qos": val_qos,
+            },
+            checkpoint_path,
+        )
 
-    except KeyboardInterrupt:
-        print_val_summary(val_history, ep)
-        save_checkpoint(args, ep, learner, optim, baseline, lr_sched)
-        save_val_history(args, val_history, ep)
 
-    finally:
-        export_train_test_stats(args, start_ep, train_stats, test_stats)
+def main():
+    args = parse_args()
+    train(args)
+
 
 if __name__ == "__main__":
-    main(parse_args())
+    main()

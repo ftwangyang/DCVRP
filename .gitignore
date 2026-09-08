@@ -38,15 +38,3 @@ desktop.ini
 .idea/
 *.swp
 *.swo
-
-# Golden model weights are in checkpoints/ (93 MB, fully tracked)
-# Ignore large intermediate experimental checkouts if any
-experiments/checkpoints/
-
-# Ignore large generated training tensors (>100MB violates GitHub file limits)
-# Generated dynamically on the fly by reproduction/instances.py
-reproduction/data/train_sample_*.pt
-
-# Scratch runs and temporary evaluation outputs
-experiments/results/*/raw_*.csv
-
