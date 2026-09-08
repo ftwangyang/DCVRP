@@ -95,7 +95,7 @@
   "paper_targets_sha256": "9e05d332a3cc9b3508e83b28717c82e4da3a341d1121701c3bcdecb48fb8e694",
   "raw_instance_results": {
     "path": "experiments\\results\\reproduction_n20\\raw_instance_results.csv",
-    "sha256": "748a15bea93ae5be71ca0240fb725e59e6f67ea14466c6ed58a94867849df5dc",
+    "sha256": "f970f47e441fdfc77981baa7e1b2e8ecdf764661973133f3babe24d751574759",
     "confidence_interval": "two-sided 95% Student-t interval over the 100 instance costs"
   },
   "test_data": {
@@ -234,24 +234,24 @@
       "vehicle_selection": "centralized"
     },
     "DVNDA": {
-      "inference_peak_allocated_bytes": 48211968,
+      "inference_peak_allocated_bytes": 46699520,
       "parameters_total": 926596,
       "parameters_trainable": 926596,
       "parameters_shared_encoder_decoder": 743040,
       "parameters_vehicle_selector": 183556,
       "checkpoint": {
         "path": "checkpoints\\DVNDA\\best_paper_matched.pt",
-        "sha256": "c4306e9558fe8bd7e677c19088b22894764b24d52cd8adbfca2eafee7d18fcd4",
-        "selected_epoch": 16,
-        "epochs_configured": 20,
-        "steps_per_epoch": 100,
+        "sha256": "7afe553fc77f64d503da3c161dd7cb8071c8fe8608adf22ca13acc73c1182bdb",
+        "selected_epoch": 2,
+        "epochs_configured": 10,
+        "steps_per_epoch": 1000,
         "batch_size": 100,
-        "parameter_updates_at_selection": 1600,
+        "parameter_updates_at_selection": 2000,
         "selector": "independent",
-        "train_vehicle_policy": "sample_logp",
+        "train_vehicle_policy": "public_argmax",
         "learning_rate": 0.0001,
-        "baseline_update_interval": 100,
-        "train_seed": 1234,
+        "baseline_update_interval": 1000,
+        "train_seed": 2234,
         "training_seconds": null,
         "completed_run_training_seconds": 2444.0802049999998,
         "completed_run_parameter_updates": 2000,
@@ -272,6 +272,6 @@
     "gpu_total_memory_bytes": 12878086144
   },
   "worst_cell_absolute_percentage_error": 0.03966113456390197,
-  "mean_absolute_percentage_error": 0.01831742251473957,
+  "mean_absolute_percentage_error": 0.01678189085295875,
   "cells_outside_tolerance": []
 }
