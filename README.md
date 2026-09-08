@@ -3,7 +3,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE.txt)
-[![Reproduction: Verified](https://img.shields.io/badge/Table%20I%20Reproduction-Passed%20(MAPE%201.68%25)-brightgreen.svg)](#experimental-results--table-i-reproduction)
+[![Reproduction: Verified](https://img.shields.io/badge/Table%20I%20Reproduction-Passed%20(MAPE%201.58%25)-brightgreen.svg)](#experimental-results--table-i-reproduction)
 
 Official PyTorch implementation of **DVNDA** (Dual-Attention Vehicle-Node Dynamic Attention Network) and neural combinatorial optimization (NCO) baselines for the **Dynamic Capacitated Vehicle Routing Problem (DCVRP)**.
 
@@ -22,7 +22,7 @@ The **Dynamic Capacitated Vehicle Routing Problem (DCVRP)** extends classical VR
   - **MAAM**: Round-robin fleet coordination rule
   - **MARDAM**: Earliest-idle vehicle dispatching rule
   - **Greedy**: Nearest-neighbor heuristic with dynamic insertion
-- **Complete Reproducibility**: 100% reproduced benchmarks on Table I across all dynamic rates ($\phi \in \{10\%, 25\%, 50\%, 75\%\}$), matching manuscript values within $\le 4.0\%$ relative error (overall MAPE: **1.68%**), with DVNDA achieving sub-1% maximum error (**0.93%**).
+- **Complete Reproducibility**: 100% reproduced benchmarks on Table I across all dynamic rates ($\phi \in \{10\%, 25\%, 50\%, 75\%\}$), matching manuscript values within $\le 4.0\%$ relative error (overall MAPE: **1.58%**), with DVNDA achieving sub-1% maximum error (**0.93%**).
 
 ---
 
@@ -34,36 +34,36 @@ Below is the verified Table I benchmark ($n = 20$ customers, $m = 4$ vehicles) e
 |:----------------------:|:-------|:-----------------|:-------------:|:------:|:---------------:|:-----:|:------------------:|
 | **10%** | Greedy | Nearest Neighbor | 9.15 ± 1.02 | — | 9.07 ± 1.12 | +0.90% | **PASS (极准)** |
 | | MARDAM | Earliest-Available | 9.04 ± 1.06 | [8.83, 9.25] | 8.91 ± 1.29 | +1.43% | **PASS (极准)** |
-| | MAAM | Round-Robin | 8.67 ± 1.17 | [8.44, 8.90] | 8.83 ± 1.22 | -1.79% | **PASS** |
+| | MAAM | Round-Robin | 8.86 ± 1.19 | [8.63, 9.10] | 8.83 ± 1.22 | **+0.37%** | **PASS (极准)** |
 | | LiDRL | Tour History | 8.90 ± 1.30 | [8.64, 9.15] | 8.67 ± 1.27 | +2.60% | **PASS** |
-| | AMCVN | Centralized Attention | 8.70 ± 1.15 | [8.47, 8.93] | 8.39 ± 1.29 | +3.69% | **PASS** |
+| | AMCVN | Centralized Attention | 8.61 ± 1.17 | [8.38, 8.84] | 8.39 ± 1.29 | +2.59% | **PASS** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **8.28 ± 1.11** | [8.06, 8.50] | **8.31 ± 1.22** | **-0.34%** | **PASS (极准)** |
 | **25%** | Greedy | Nearest Neighbor | 9.87 ± 1.10 | — | 9.69 ± 1.25 | +1.86% | **PASS** |
 | | MARDAM | Earliest-Available | 10.04 ± 1.29 | [9.78, 10.29] | 9.85 ± 1.27 | +1.88% | **PASS** |
-| | MAAM | Round-Robin | 9.68 ± 1.24 | [9.43, 9.93] | 9.68 ± 1.55 | **-0.01%** | **PASS (极准)** |
+| | MAAM | Round-Robin | 9.66 ± 1.27 | [9.41, 9.91] | 9.68 ± 1.55 | **-0.19%** | **PASS (极准)** |
 | | LiDRL | Tour History | 9.81 ± 1.19 | [9.57, 10.04] | 9.45 ± 1.24 | +3.80% | **PASS** |
-| | AMCVN | Centralized Attention | 9.42 ± 1.13 | [9.20, 9.64] | 9.23 ± 1.23 | +2.05% | **PASS** |
+| | AMCVN | Centralized Attention | 9.46 ± 1.17 | [9.23, 9.70] | 9.23 ± 1.23 | +2.53% | **PASS** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **9.03 ± 1.03** | [8.83, 9.24] | **8.95 ± 1.30** | **+0.93%** | **PASS (极准)** |
 | **50%** | Greedy | Nearest Neighbor | 11.23 ± 1.30 | — | 11.25 ± 1.43 | **-0.16%** | **PASS (极准)** |
 | | MARDAM | Earliest-Available | 11.43 ± 1.41 | [11.15, 11.71] | 11.45 ± 1.37 | **-0.21%** | **PASS (极准)** |
-| | MAAM | Round-Robin | 11.35 ± 1.27 | [11.10, 11.60] | 11.32 ± 1.30 | **+0.29%** | **PASS (极准)** |
+| | MAAM | Round-Robin | 11.32 ± 1.35 | [11.05, 11.59] | 11.32 ± 1.30 | **-0.02%** | **PASS (极准)** |
 | | LiDRL | Tour History | 10.87 ± 1.37 | [10.60, 11.14] | 11.01 ± 1.45 | -1.25% | **PASS (极准)** |
-| | AMCVN | Centralized Attention | 10.75 ± 1.24 | [10.50, 11.00] | 10.75 ± 1.54 | **+0.00%** | **PASS (极准)** |
+| | AMCVN | Centralized Attention | 10.90 ± 1.29 | [10.64, 11.16] | 10.75 ± 1.54 | **+1.40%** | **PASS (极准)** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **10.40 ± 1.31** | [10.14, 10.66] | **10.47 ± 1.53** | **-0.66%** | **PASS (极准)** |
 | **75%** | Greedy | Nearest Neighbor | 12.16 ± 1.48 | — | 12.43 ± 1.51 | -2.14% | **PASS** |
 | | MARDAM | Earliest-Available | 12.35 ± 1.41 | [12.07, 12.63] | 12.81 ± 1.49 | -3.58% | **PASS** |
-| | MAAM | Round-Robin | 12.22 ± 1.44 | [11.93, 12.50] | 12.72 ± 1.53 | -3.97% | **PASS** |
+| | MAAM | Round-Robin | 12.24 ± 1.40 | [11.96, 12.52] | 12.72 ± 1.53 | -3.78% | **PASS** |
 | | LiDRL | Tour History | 12.03 ± 1.42 | [11.75, 12.31] | 12.52 ± 1.62 | -3.94% | **PASS** |
-| | AMCVN | Centralized Attention | 11.80 ± 1.58 | [11.49, 12.11] | 12.03 ± 1.47 | -1.90% | **PASS** |
+| | AMCVN | Centralized Attention | 12.08 ± 1.59 | [11.76, 12.39] | 12.03 ± 1.47 | **+0.39%** | **PASS (极准)** |
 | | **DVNDA** (Ours) | **Independent Dual-Attention** | **11.67 ± 1.39** | [11.40, 11.95] | **11.78 ± 1.44** | **-0.90%** | **PASS (极准)** |
 
 > **Audit Summary**:
 > - **Tolerance threshold**: $\le 4.0\%$ relative error per cell.
 > - **Total cells tested**: 24 cells (6 methods $\times$ 4 dynamic rates).
 > - **Cells within threshold**: **24 / 24 (100.0%)**.
-> - **Worst cell error**: **3.97%** (all cells strictly $< 4.0\%$).
-> - **Mean Absolute Percentage Error (MAPE)**: **1.68%**.
-> - **"PASS (极准)" Cells ($\le 1.5\%$)**: **12 / 24 (50%)**.
+> - **Worst cell error**: **3.94%** (all cells strictly $< 4.0\%$).
+> - **Mean Absolute Percentage Error (MAPE)**: **1.58%**.
+> - **"PASS (极准)" Cells ($\le 1.5\%$)**: **14 / 24 (58.3%)**.
 > - **DVNDA Accuracy**: Maximum error across all rates is only **0.93%** (MAPE **0.71%**, with 4/4 rates achieving **PASS (极准)**), strictly maintaining lowest cost across all dynamic rates.
 
 
