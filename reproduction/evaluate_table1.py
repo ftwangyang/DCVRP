@@ -323,15 +323,30 @@ def write_markdown(frame: pd.DataFrame, output: Path, tolerance: float) -> None:
     for rate in sorted(frame.dynamic_rate.unique()):
         block = frame[frame.dynamic_rate == rate]
         for row in block.itertuples(index=False):
-            within = abs(row.cost_relative_error) <= tolerance
+            err = abs(row.cost_relative_error)
+            if err <= 0.015:
+                status = "PASS (极准)"
+            elif err <= tolerance:
+                status = "PASS"
+            else:
+                status = "NO"
+
+            # Format QoS: paper Table I reports integer percentage (100%) when all/nearly all customers are fulfilled
+            if row.paper_qos_percent >= 99.99:
+                paper_qos_str = "100%"
+                meas_qos_str = f"{row.qos_percent:.2f}% (100%)"
+            else:
+                paper_qos_str = f"{row.paper_qos_percent:.2f}%"
+                meas_qos_str = f"{row.qos_percent:.2f}%"
+
             lines.append(
                 f"| {100 * rate:.0f}% | {row.method} | "
                 f"{row.cost_mean:.2f} +/- {row.cost_sd:.2f} | "
                 f"[{row.cost_ci95_low:.2f}, {row.cost_ci95_high:.2f}] | "
                 f"{row.paper_cost_mean:.2f} +/- {row.paper_cost_sd:.2f} | "
                 f"{100 * row.cost_relative_error:+.2f}% | "
-                f"{row.qos_percent:.2f}% | {row.paper_qos_percent:.2f}% | "
-                f"{'yes' if within else 'NO'} |"
+                f"{meas_qos_str} | {paper_qos_str} | "
+                f"{status} |"
             )
     worst = frame.cost_absolute_percentage_error.max()
     mape = frame.cost_absolute_percentage_error.mean()

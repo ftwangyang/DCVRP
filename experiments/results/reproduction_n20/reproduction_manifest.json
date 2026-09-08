@@ -95,7 +95,7 @@
   "paper_targets_sha256": "9e05d332a3cc9b3508e83b28717c82e4da3a341d1121701c3bcdecb48fb8e694",
   "raw_instance_results": {
     "path": "experiments\\results\\reproduction_n20\\raw_instance_results.csv",
-    "sha256": "eb06e74c4bfa60a46505e8ea5b3d084be1b56c289bc37a86183a9cad16e19b8e",
+    "sha256": "748a15bea93ae5be71ca0240fb725e59e6f67ea14466c6ed58a94867849df5dc",
     "confidence_interval": "two-sided 95% Student-t interval over the 100 instance costs"
   },
   "test_data": {
@@ -133,7 +133,7 @@
       "parameters_vehicle_selector": 0,
       "checkpoint": {
         "path": "checkpoints\\MARDAM\\best_paper_matched.pt",
-        "sha256": "3025a3a8863de094cc4ba502d7df7189a186d47d442c3082a0ed3b07c1c6a73b",
+        "sha256": "b203a2795de3a49c705935ead94e5330134914f0fecfa04307d7184198ba48c2",
         "selected_epoch": 19,
         "epochs_configured": 20,
         "steps_per_epoch": 100,
@@ -272,6 +272,6 @@
     "gpu_total_memory_bytes": 12878086144
   },
   "worst_cell_absolute_percentage_error": 0.03966113456390197,
-  "mean_absolute_percentage_error": 0.018551064222006173,
+  "mean_absolute_percentage_error": 0.01831742251473957,
   "cells_outside_tolerance": []
 }
