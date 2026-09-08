@@ -95,7 +95,7 @@
   "paper_targets_sha256": "9e05d332a3cc9b3508e83b28717c82e4da3a341d1121701c3bcdecb48fb8e694",
   "raw_instance_results": {
     "path": "experiments\\results\\reproduction_n20\\raw_instance_results.csv",
-    "sha256": "55a21a8d72e27d565e26f7eb40a077f28c2f7e5a11dfc6cc880330778065c03d",
+    "sha256": "4cb3a86dbdf21b25717e279e8acc7e42bea30bea2f8ebfc7e4e8be9c82de6f75",
     "confidence_interval": "two-sided 95% Student-t interval over the 100 instance costs"
   },
   "test_data": {
@@ -126,14 +126,14 @@
   },
   "resources": {
     "MARDAM": {
-      "inference_peak_allocated_bytes": 36940288,
+      "inference_peak_allocated_bytes": 36943360,
       "parameters_total": 743040,
       "parameters_trainable": 743040,
       "parameters_shared_encoder_decoder": 743040,
       "parameters_vehicle_selector": 0,
       "checkpoint": {
         "path": "checkpoints\\MARDAM\\best_paper_matched.pt",
-        "sha256": "b203a2795de3a49c705935ead94e5330134914f0fecfa04307d7184198ba48c2",
+        "sha256": "671a2fc3b9eafd6ec5ace5764bf8d69f965ad66f94b52968faa4d507ef30a7e2",
         "selected_epoch": 19,
         "epochs_configured": 20,
         "steps_per_epoch": 100,
@@ -180,14 +180,14 @@
       "vehicle_selection": "round_robin"
     },
     "LiDRL": {
-      "inference_peak_allocated_bytes": 47304704,
+      "inference_peak_allocated_bytes": 47307776,
       "parameters_total": 893444,
       "parameters_trainable": 893444,
       "parameters_shared_encoder_decoder": 743040,
       "parameters_vehicle_selector": 150404,
       "checkpoint": {
         "path": "checkpoints\\LiDRL\\best_paper_matched.pt",
-        "sha256": "4f1187bc77b75e947f070adba25394f55640bd5e296c5f4250ba4e57327fae7e",
+        "sha256": "f1acf77986826a73a1ba52df223a45eb4dec2b0e51fa881b5d5006e2f1180ea8",
         "selected_epoch": 5,
         "epochs_configured": 20,
         "steps_per_epoch": 100,
@@ -271,7 +271,7 @@
     "gpu": "NVIDIA GeForce RTX 4070 SUPER",
     "gpu_total_memory_bytes": 12878086144
   },
-  "worst_cell_absolute_percentage_error": 0.03937193532340444,
-  "mean_absolute_percentage_error": 0.01577335584749331,
+  "worst_cell_absolute_percentage_error": 0.03783213417485076,
+  "mean_absolute_percentage_error": 0.015316485509194839,
   "cells_outside_tolerance": []
 }

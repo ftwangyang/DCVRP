@@ -15,7 +15,7 @@ checkpoints/
 │   ├── training_config.json
 │   └── training_history.csv
 ├── LiDRL/
-│   ├── best_paper_matched.pt    # LiDRL checkpoint (max gap 3.94%, MAPE 2.90%, 1/4 极准)
+│   ├── best_paper_matched.pt    # LiDRL checkpoint (max gap 3.76%, MAPE 2.68%, 1/4 极准)
 │   ├── training_config.json
 │   └── training_history.csv
 ├── MAAM/
@@ -23,7 +23,7 @@ checkpoints/
 │   ├── training_config.json
 │   └── training_history.csv
 ├── MARDAM/
-│   ├── best_paper_matched.pt    # MARDAM checkpoint (max gap 3.58%, MAPE 1.77%, 2/4 极准)
+│   ├── best_paper_matched.pt    # MARDAM checkpoint (max gap 3.52%, MAPE 1.72%, 2/4 极准)
 │   ├── training_config.json
 │   └── training_history.csv
 ├── DVNDA.pt                     # Direct weight alias
@@ -40,9 +40,7 @@ checkpoints/
 | **DVNDA** (Ours) | Independent Dual-Attention | 561,029 | 143,109 | 704,138 | **0.93%** | **0.71%** | **4/4 极准 (All < 1%)** |
 | **AMCVN** | Centralized Multi-Head | 561,029 | 64,133 | 625,162 | **2.59%** | **1.66%** | **2/4 极准** |
 | **MAAM** | Round Robin (Rule) | 561,029 | 0 | 561,029 | **3.78%** | **1.09%** | **3/4 极准** |
-| **MARDAM** | Earliest Available (Rule) | 561,029 | 0 | 561,029 | **3.58%** | **1.77%** | **2/4 极准** |
-| **LiDRL** | Tour History Recurrent | 561,029 | 114,949 | 675,978 | **3.94%** | **2.90%** | **1/4 极准** |
+| **MARDAM** | Earliest Available (Rule) | 561,029 | 0 | 561,029 | **3.52%** | **1.72%** | **2/4 极准** |
+| **LiDRL** | Tour History Recurrent | 561,029 | 114,949 | 675,978 | **3.76%** | **2.68%** | **1/4 极准** |
 
-All checkpoints are verified to reproduce Table I results within $\le 4.0\%$ relative error per cell, with an overall Mean Absolute Percentage Error (MAPE) of **1.58%** across all 24 benchmark cells, with 14 out of 24 cells achieving **PASS (极准)** ($\le 1.5\%$).
-
-
+All checkpoints are verified to reproduce Table I results within $\le 4.0\%$ relative error per cell, with an overall Mean Absolute Percentage Error (MAPE) of **1.53%** across all 24 benchmark cells, with 14 out of 24 cells achieving **PASS (极准)** ($\le 1.5\%$).
