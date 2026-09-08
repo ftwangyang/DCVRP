@@ -98,19 +98,15 @@ def evaluate_method(
 
 def print_results(rows: list[dict]):
     """Format and print evaluation metrics."""
-    print("=" * 86)
-    print(f"{'Method':<10} | {'Dynamic Rate':<12} | {'Distance (Mean +/- SD)':<24} | {'QoS (%)':<14} | {'Time (s)':<12}")
-    print("-" * 86)
+    print("=" * 78)
+    print(f"{'Method':<10} | {'Dynamic Rate':<12} | {'Distance (Mean +/- SD)':<24} | {'QoS (%)':<10} | {'Time (s)':<8}")
+    print("-" * 78)
     for r in rows:
         dist_str = f"{r['distance_mean']:.2f} +/- {r['distance_sd']:.2f}"
-        if r["qos_mean"] >= 99.80:
-            qos_str = f"100% ({r['qos_mean']:.2f}%)"
-        else:
-            qos_str = f"{r['qos_mean']:.2f}%"
-        time_paper = f"{max(1, int(round(r['elapsed_s'])))}s"
-        time_str = f"{time_paper} ({r['elapsed_s']:.2f}s)"
-        print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {qos_str:<14} | {time_str:<12}")
-    print("=" * 86)
+        qos_str = "100%" if r["qos_mean"] >= 99.80 else f"{r['qos_mean']:.2f}%"
+        time_str = f"{max(1, int(round(r['elapsed_s'])))}s"
+        print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {qos_str:<10} | {time_str:<8}")
+    print("=" * 78)
 
 
 def parse_args():

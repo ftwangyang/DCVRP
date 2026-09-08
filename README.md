@@ -115,17 +115,11 @@ To evaluate all models:
 python eval.py --method all
 ```
 
-Expected output format:
-```
-======================================================================================
-Method     | Dynamic Rate | Distance (Mean +/- SD)   | QoS (%)        | Time (s)    
---------------------------------------------------------------------------------------
-DVNDA      | phi =   10%    | 8.28 +/- 1.11            | 100% (99.90%)  | 1s (0.28s)  
-DVNDA      | phi =   25%    | 9.03 +/- 1.03            | 100% (99.85%)  | 1s (0.29s)  
-DVNDA      | phi =   50%    | 10.40 +/- 1.31           | 100% (99.85%)  | 1s (0.28s)  
-DVNDA      | phi =   75%    | 11.67 +/- 1.39           | 100% (99.85%)  | 1s (0.26s)  
-======================================================================================
-```
+Optional evaluation arguments:
+- `--instances`: Number of evaluation instances per dynamic rate (default: `100`).
+- `--seed`: Random seed for test instance generation (default: `20260821`).
+- `--rates`: Dynamic customer rates to evaluate (default: `0.10 0.25 0.50 0.75`).
+- `--device`: Target computation device (`cuda` or `cpu`).
 
 ### 3. Training From Scratch
 
@@ -136,6 +130,39 @@ python train.py --method DVNDA --epochs 100 --batch-size 100 --lr 0.0001
 ```
 
 Checkpoints will be saved automatically to `checkpoints/`.
+
+---
+
+## 📊 Benchmark Results
+
+Performance comparison on synthetic instances ($n = 20, m = 4$, 100 test instances per dynamic rate) as reported in **Table I** of the manuscript:
+
+| Dynamic Rate ($\phi$) | Method | Distance (Mean ± SD) | QoS (%) | Inference Time |
+|:---:|:---|:---:|:---:|:---:|
+| **10%** | Greedy | 9.07 ± 1.12 | 99.90% | — |
+| | MARDAM | 8.91 ± 1.29 | 99.95% | 1s |
+| | MAAM | 8.83 ± 1.22 | 99.80% | 1s |
+| | LiDRL | 8.67 ± 1.27 | 100% | 1s |
+| | AMCVN | 8.39 ± 1.29 | 100% | 1s |
+| | **DVNDA** (Ours) | **8.31 ± 1.22** | **100%** | **1s** |
+| **25%** | Greedy | 9.69 ± 1.25 | 99.90% | — |
+| | MARDAM | 9.85 ± 1.27 | 99.80% | 1s |
+| | MAAM | 9.68 ± 1.55 | 99.65% | 1s |
+| | LiDRL | 9.45 ± 1.24 | 100% | 1s |
+| | AMCVN | 9.23 ± 1.23 | 100% | 1s |
+| | **DVNDA** (Ours) | **8.95 ± 1.30** | **100%** | **1s** |
+| **50%** | Greedy | 11.25 ± 1.43 | 99.90% | — |
+| | MARDAM | 11.45 ± 1.37 | 99.85% | 1s |
+| | MAAM | 11.32 ± 1.30 | 99.40% | 1s |
+| | LiDRL | 11.01 ± 1.45 | 100% | 1s |
+| | AMCVN | 10.75 ± 1.54 | 100% | 1s |
+| | **DVNDA** (Ours) | **10.47 ± 1.53** | **100%** | **1s** |
+| **75%** | Greedy | 12.43 ± 1.51 | 99.45% | — |
+| | MARDAM | 12.81 ± 1.49 | 99.85% | 1s |
+| | MAAM | 12.72 ± 1.53 | 99.95% | 1s |
+| | LiDRL | 12.52 ± 1.62 | 100% | 1s |
+| | AMCVN | 12.03 ± 1.47 | 100% | 1s |
+| | **DVNDA** (Ours) | **11.78 ± 1.44** | **100%** | **1s** |
 
 ---
 
