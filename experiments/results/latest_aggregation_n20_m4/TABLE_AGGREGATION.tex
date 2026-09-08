@@ -1,0 +1,26 @@
+\begin{table}[t]
+\centering
+\caption{Aggregation-rule ablation on the time-driven DCVRP environment ($n=20$, $m=4$, 100 paired instances per dynamic rate). Values are mean $\pm$ standard deviation.}
+\label{tab:aggregation_ablation}
+\begin{tabular}{llccc}
+\toprule
+Dynamic rate & Rule & Cost $\downarrow$ & QoS (\%) $\uparrow$ & Time/100 (s) $\downarrow$ \\
+\midrule
+10\% & Argmax & 8.36 $\pm$ 0.99 & 99.90 $\pm$ 0.70 & 0.287 $\pm$ 0.029 \\
+10\% & Softmax & 8.39 $\pm$ 0.98 & 99.90 $\pm$ 0.69 & 0.288 $\pm$ 0.010 \\
+10\% & Random & 9.94 $\pm$ 1.03 & 99.81 $\pm$ 0.84 & 0.162 $\pm$ 0.018 \\
+\midrule
+25\% & Argmax & 9.09 $\pm$ 1.22 & 99.90 $\pm$ 0.70 & 0.322 $\pm$ 0.033 \\
+25\% & Softmax & 9.10 $\pm$ 1.21 & 99.90 $\pm$ 0.69 & 0.326 $\pm$ 0.019 \\
+25\% & Random & 10.51 $\pm$ 1.11 & 99.76 $\pm$ 0.95 & 0.183 $\pm$ 0.023 \\
+\midrule
+50\% & Argmax & 10.21 $\pm$ 1.14 & 99.95 $\pm$ 0.50 & 0.307 $\pm$ 0.021 \\
+50\% & Softmax & 10.22 $\pm$ 1.13 & 99.95 $\pm$ 0.50 & 0.304 $\pm$ 0.016 \\
+50\% & Random & 11.31 $\pm$ 1.04 & 99.79 $\pm$ 0.88 & 0.170 $\pm$ 0.021 \\
+\midrule
+75\% & Argmax & 11.28 $\pm$ 1.14 & 99.90 $\pm$ 0.70 & 0.284 $\pm$ 0.030 \\
+75\% & Softmax & 11.28 $\pm$ 1.13 & 99.90 $\pm$ 0.70 & 0.293 $\pm$ 0.030 \\
+75\% & Random & 11.77 $\pm$ 1.05 & 99.76 $\pm$ 0.94 & 0.153 $\pm$ 0.015 \\
+\bottomrule
+\end{tabular}
+\end{table}

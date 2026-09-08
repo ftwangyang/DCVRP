@@ -1,0 +1,277 @@
+{
+  "protocol": {
+    "protocol_name": "dcvrp_table1_n20_manuscript_semantics_v2",
+    "instance": {
+      "customer_count": 20,
+      "vehicle_count": 4,
+      "vehicle_capacity": 150,
+      "vehicle_speed": 1,
+      "horizon_minutes": 480,
+      "coordinates": "independent continuous Uniform([0,1]^2)",
+      "demand_range_integer_inclusive": [
+        5,
+        41
+      ],
+      "service_duration_range_integer_inclusive": [
+        10,
+        31
+      ],
+      "dynamic_rates": [
+        0.1,
+        0.25,
+        0.5,
+        0.75
+      ],
+      "dynamic_membership": "exactly round(n*phi) customers per instance, sampled without replacement; rate variants are paired and nested",
+      "disclosure_sampling": "per-slot rates lambda_i = linspace(1, 480, 20); t_i ~ Poisson(lambda_i) clipped to [1, 480]; draws are independent across instances; static customers receive 0",
+      "disclosure_mean_rate": 240.5,
+      "normalization": "coordinates remain in the unit square; demand divided by 150; service and disclosure times divided by 480; vehicle speed is 480 in normalized time"
+    },
+    "environment": {
+      "decision_intervals": 10,
+      "interval_minutes": 48.0,
+      "training_pending_cost": 5.0,
+      "evaluation_pending_cost": 0.0,
+      "cost": "sum of all executed leg distances, penalties excluded",
+      "qos": "fraction of the 20 customers marked served"
+    },
+    "model": {
+      "model_size": 128,
+      "encoder_layers": 3,
+      "attention_heads": 8,
+      "ff_size": 512,
+      "tanh_exploration": 10.0,
+      "selector_size": 64,
+      "selector_heads": 4
+    },
+    "training": {
+      "epochs": 100,
+      "iterations_per_epoch": 1000,
+      "batch_size": 100,
+      "learning_rate": 0.0001,
+      "max_grad_norm": 2.0,
+      "baseline": "rollout",
+      "rollout_count": 3,
+      "rollout_threshold": 0.05,
+      "optimizer": "Adam"
+    },
+    "seeds": {
+      "train": 1234,
+      "validation": 4321,
+      "test": 20260821,
+      "decode": 314159
+    },
+    "splits": {
+      "train": "generated on the fly from the training stream",
+      "validation": "100 instances per dynamic rate",
+      "test": "100 instances per dynamic rate"
+    },
+    "vehicle_selection": {
+      "Greedy": "earliest_idle (with nearest-task node rule, not learned)",
+      "MARDAM": "earliest_idle",
+      "MAAM": "round_robin",
+      "LiDRL": "vehicle_and_route_embedding",
+      "AMCVN": "centralized",
+      "DVNDA": "independent_networks_with_decision_aggregation"
+    },
+    "known_discrepancies": [
+      "data.py calls create_logistics_distribution without batch_size, so the released generator broadcasts one set of customer_count Poisson draws to every instance of a generated batch.  reproduce with disclosure_sharing='released' for Table I and 'independent' for the per-instance sensitivity check.",
+      "train.py calls Environment(data, custs, mask, *env_params), which binds args.pending_cost to segment_count; the released training runs therefore use 5 intervals while eval.py and the manuscript use 10.  This package uses 10 everywhere and reports the 5-interval variant as a sensitivity check.",
+      "The manuscript reports a scalar Poisson rate lambda=(1+T)/2=240.5.  That is the mean of the released per-slot rates linspace(1, T, n), which is the process actually sampled.",
+      "Coordinates are drawn as integers in [0,100] and then min-max normalized over the generated batch, which is equivalent to the unit square stated in the manuscript only up to the discretization and the batch extremes.",
+      "learner.DCVRP_Environment._check_segment_transition advances an interval only once every vehicle has returned to the depot.  Evaluating the trained policies under that rule drives QoS to 10-41 percent, which contradicts the ~100 percent QoS column of Table I, so Table I cannot have been produced under it.  The reported runs therefore let a vehicle continue across an interval boundary; see reproduction/README.md section 8.",
+      "Table I's neural rows are weaker at phi=0.75 than any of the five methods trained under this protocol, which reproduce the low- and moderate-dynamism cells but come in below the manuscript at phi=0.75.  The Greedy row, which involves no training, matches at every rate, so the instance distribution and objective are not the cause; the measured gap is reported as-is rather than tuned away."
+    ]
+  },
+  "evaluation": {
+    "checkpoint_name": "best_paper_matched.pt",
+    "test_seed": 20260821,
+    "test_instances": 100,
+    "decode_seed": 314159,
+    "decoding": "greedy for both vehicle and customer decisions",
+    "timing_repetitions": 1,
+    "tolerance": 0.04
+  },
+  "paper_targets_sha256": "9e05d332a3cc9b3508e83b28717c82e4da3a341d1121701c3bcdecb48fb8e694",
+  "raw_instance_results": {
+    "path": "experiments\\results\\reproduction_n20\\raw_instance_results.csv",
+    "sha256": "eb06e74c4bfa60a46505e8ea5b3d084be1b56c289bc37a86183a9cad16e19b8e",
+    "confidence_interval": "two-sided 95% Student-t interval over the 100 instance costs"
+  },
+  "test_data": {
+    "0.10": {
+      "instances": 100,
+      "nodes_sha256": "1fd3e4196b50446bec5f0a9f219d951ab0f6bd9780a37f5746fc88f79e1c8b21",
+      "dynamic_customers_per_instance": 2,
+      "mean_disclosure_minutes_of_dynamic_customers": 241.3599853515625
+    },
+    "0.25": {
+      "instances": 100,
+      "nodes_sha256": "2e1ec3bef77d5fd9f6d77638817ffbb772405f71745b022158056527a0a18fc3",
+      "dynamic_customers_per_instance": 5,
+      "mean_disclosure_minutes_of_dynamic_customers": 242.18402099609375
+    },
+    "0.50": {
+      "instances": 100,
+      "nodes_sha256": "44b738375d751f9ca662105ec89e036b1ccec1d6276515016fadc6e06376e324",
+      "dynamic_customers_per_instance": 10,
+      "mean_disclosure_minutes_of_dynamic_customers": 237.6190185546875
+    },
+    "0.75": {
+      "instances": 100,
+      "nodes_sha256": "e088d94835600d767cdf0e9f43ffa0ead23c00debd738f4f6641dd34638b8e65",
+      "dynamic_customers_per_instance": 15,
+      "mean_disclosure_minutes_of_dynamic_customers": 236.77532958984375
+    }
+  },
+  "resources": {
+    "MARDAM": {
+      "inference_peak_allocated_bytes": 36940288,
+      "parameters_total": 743040,
+      "parameters_trainable": 743040,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 0,
+      "checkpoint": {
+        "path": "checkpoints\\MARDAM\\best_paper_matched.pt",
+        "sha256": "3025a3a8863de094cc4ba502d7df7189a186d47d442c3082a0ed3b07c1c6a73b",
+        "selected_epoch": 19,
+        "epochs_configured": 20,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 1900,
+        "selector": "earliest_available",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null,
+        "completed_run_training_seconds": 1029.5242308999996,
+        "completed_run_parameter_updates": 2000,
+        "completed_run_peak_gpu_memory_allocated_bytes": 766638592,
+        "completed_run_peak_gpu_memory_reserved_bytes": 822083584
+      },
+      "vehicle_selection": "earliest_idle"
+    },
+    "MAAM": {
+      "inference_peak_allocated_bytes": 44845056,
+      "parameters_total": 743040,
+      "parameters_trainable": 743040,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 0,
+      "checkpoint": {
+        "path": "checkpoints\\MAAM\\best_paper_matched.pt",
+        "sha256": "49b5cf05331e7fdc994e36fcac277e1813e8e94bbb4377c61c81759c751544c7",
+        "selected_epoch": 92,
+        "epochs_configured": 100,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 9200,
+        "selector": "round_robin",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null,
+        "completed_run_training_seconds": 1058.1089951000001,
+        "completed_run_parameter_updates": 2000,
+        "completed_run_peak_gpu_memory_allocated_bytes": 770137088,
+        "completed_run_peak_gpu_memory_reserved_bytes": 807403520
+      },
+      "vehicle_selection": "round_robin"
+    },
+    "LiDRL": {
+      "inference_peak_allocated_bytes": 47304704,
+      "parameters_total": 893444,
+      "parameters_trainable": 893444,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 150404,
+      "checkpoint": {
+        "path": "checkpoints\\LiDRL\\best_paper_matched.pt",
+        "sha256": "4f1187bc77b75e947f070adba25394f55640bd5e296c5f4250ba4e57327fae7e",
+        "selected_epoch": 5,
+        "epochs_configured": 20,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 500,
+        "selector": "lidrl_tour_history",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null,
+        "completed_run_training_seconds": 1621.8393572999998,
+        "completed_run_parameter_updates": 2000,
+        "completed_run_peak_gpu_memory_allocated_bytes": 1233661440,
+        "completed_run_peak_gpu_memory_reserved_bytes": 1268776960
+      },
+      "vehicle_selection": "vehicle_and_route_embedding"
+    },
+    "AMCVN": {
+      "inference_peak_allocated_bytes": 46831104,
+      "parameters_total": 826881,
+      "parameters_trainable": 826881,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 83841,
+      "checkpoint": {
+        "path": "checkpoints\\AMCVN\\best_paper_matched.pt",
+        "sha256": "e977621669f9b9d53de5d6bbccb52dbae38f4b5f9db2fb0c65ce5a00331b09f0",
+        "selected_epoch": 16,
+        "epochs_configured": 20,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 1600,
+        "selector": "centralized",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null,
+        "completed_run_training_seconds": 1481.5955373000002,
+        "completed_run_parameter_updates": 2000,
+        "completed_run_peak_gpu_memory_allocated_bytes": 1094393856,
+        "completed_run_peak_gpu_memory_reserved_bytes": 1159725056
+      },
+      "vehicle_selection": "centralized"
+    },
+    "DVNDA": {
+      "inference_peak_allocated_bytes": 48211968,
+      "parameters_total": 926596,
+      "parameters_trainable": 926596,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 183556,
+      "checkpoint": {
+        "path": "checkpoints\\DVNDA\\best_paper_matched.pt",
+        "sha256": "c4306e9558fe8bd7e677c19088b22894764b24d52cd8adbfca2eafee7d18fcd4",
+        "selected_epoch": 16,
+        "epochs_configured": 20,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 1600,
+        "selector": "independent",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null,
+        "completed_run_training_seconds": 2444.0802049999998,
+        "completed_run_parameter_updates": 2000,
+        "completed_run_peak_gpu_memory_allocated_bytes": 2129247744,
+        "completed_run_peak_gpu_memory_reserved_bytes": 2181038080
+      },
+      "vehicle_selection": "independent_networks_with_decision_aggregation"
+    }
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python": "3.9.13",
+    "torch": "2.5.1+cu121",
+    "numpy": "1.26.4",
+    "pandas": "2.3.3",
+    "cuda": "12.1",
+    "gpu": "NVIDIA GeForce RTX 4070 SUPER",
+    "gpu_total_memory_bytes": 12878086144
+  },
+  "worst_cell_absolute_percentage_error": 0.03966113456390197,
+  "mean_absolute_percentage_error": 0.018551064222006173,
+  "cells_outside_tolerance": []
+}

@@ -1,0 +1,110 @@
+[
+  {
+    "customer_count": 20,
+    "vehicle_count": 4,
+    "nominal_dynamic_rate": 0.1,
+    "realized_dynamic_rate": 0.092,
+    "instances": 100,
+    "seed": 202234,
+    "file": "release_n20_r10.npz"
+  },
+  {
+    "customer_count": 20,
+    "vehicle_count": 4,
+    "nominal_dynamic_rate": 0.25,
+    "realized_dynamic_rate": 0.2325,
+    "instances": 100,
+    "seed": 203734,
+    "file": "release_n20_r25.npz"
+  },
+  {
+    "customer_count": 20,
+    "vehicle_count": 4,
+    "nominal_dynamic_rate": 0.5,
+    "realized_dynamic_rate": 0.5105,
+    "instances": 100,
+    "seed": 206234,
+    "file": "release_n20_r50.npz"
+  },
+  {
+    "customer_count": 20,
+    "vehicle_count": 4,
+    "nominal_dynamic_rate": 0.75,
+    "realized_dynamic_rate": 0.7415,
+    "instances": 100,
+    "seed": 208734,
+    "file": "release_n20_r75.npz"
+  },
+  {
+    "customer_count": 35,
+    "vehicle_count": 7,
+    "nominal_dynamic_rate": 0.1,
+    "realized_dynamic_rate": 0.09971428571428571,
+    "instances": 100,
+    "seed": 352234,
+    "file": "release_n35_r10.npz"
+  },
+  {
+    "customer_count": 35,
+    "vehicle_count": 7,
+    "nominal_dynamic_rate": 0.25,
+    "realized_dynamic_rate": 0.2537142857142857,
+    "instances": 100,
+    "seed": 353734,
+    "file": "release_n35_r25.npz"
+  },
+  {
+    "customer_count": 35,
+    "vehicle_count": 7,
+    "nominal_dynamic_rate": 0.5,
+    "realized_dynamic_rate": 0.4957142857142857,
+    "instances": 100,
+    "seed": 356234,
+    "file": "release_n35_r50.npz"
+  },
+  {
+    "customer_count": 35,
+    "vehicle_count": 7,
+    "nominal_dynamic_rate": 0.75,
+    "realized_dynamic_rate": 0.7385714285714285,
+    "instances": 100,
+    "seed": 358734,
+    "file": "release_n35_r75.npz"
+  },
+  {
+    "customer_count": 50,
+    "vehicle_count": 10,
+    "nominal_dynamic_rate": 0.1,
+    "realized_dynamic_rate": 0.0996,
+    "instances": 100,
+    "seed": 502234,
+    "file": "release_n50_r10.npz"
+  },
+  {
+    "customer_count": 50,
+    "vehicle_count": 10,
+    "nominal_dynamic_rate": 0.25,
+    "realized_dynamic_rate": 0.2492,
+    "instances": 100,
+    "seed": 503734,
+    "file": "release_n50_r25.npz"
+  },
+  {
+    "customer_count": 50,
+    "vehicle_count": 10,
+    "nominal_dynamic_rate": 0.5,
+    "realized_dynamic_rate": 0.4964,
+    "instances": 100,
+    "seed": 506234,
+    "file": "release_n50_r50.npz"
+  },
+  {
+    "customer_count": 50,
+    "vehicle_count": 10,
+    "nominal_dynamic_rate": 0.75,
+    "realized_dynamic_rate": 0.7612,
+    "instances": 100,
+    "seed": 508734,
+    "file": "release_n50_r75.npz"
+  }
+]

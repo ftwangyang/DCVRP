@@ -1,0 +1,39 @@
+{
+  "environment": "paper_multivehicle_v2",
+  "environment_mode": "continuous-single-trip",
+  "source_generator": "released data.py semantics",
+  "vehicle_state": "independent position, remaining capacity, available time per vehicle",
+  "first_stage_fleet_use": "solver-defined",
+  "intervals": 10,
+  "horizon_minutes": 480,
+  "travel_minutes_per_normalized_unit": 100.0,
+  "m_equals_n_over_5": true,
+  "terminal_dispatch": "boundary-only: customer leg start <= 480",
+  "depot_return": "once after final dispatch",
+  "cost_definition": "sum of committed customer and depot edges with start < boundary plus terminal physical closure; unstarted planned suffixes are not charged",
+  "methods": [
+    "Tabu Search",
+    "OR-Tools"
+  ],
+  "assignment_policy": "fixed-greedy",
+  "short_route_fallback": null,
+  "tabu_implementation": "standalone deterministic Python tabu search with swap, relocate, and 2-opt neighbourhoods; it does not call OR-Tools",
+  "tabu_time_ms_per_update": 1000,
+  "ortools_metaheuristic": "GUIDED_LOCAL_SEARCH",
+  "timing_definition": {
+    "initial_planning_time": "planner call at t=0",
+    "online_replanning_time": "sum of planner calls at t>0, including the terminal closure",
+    "total_elapsed_time": "end-to-end environment plus all planning calls per instance",
+    "time_100_aggregation": "sum of the 100 per-instance elapsed times, independent of parallel experiment wall time"
+  },
+  "instances_per_group": 100,
+  "ortools_time_ms_per_update": 1000,
+  "alns_time_ms_per_nonempty_update": 1000,
+  "workers": 12,
+  "cpu": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+  "python_version": "3.9.13",
+  "alns_version": "7.0.0",
+  "ortools_version": "9.10.4067",
+  "logical_cpus": 24,
+  "experiment_wall_time_s": 271.97644180000003
+}

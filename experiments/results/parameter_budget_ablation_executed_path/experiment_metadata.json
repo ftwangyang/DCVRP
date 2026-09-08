@@ -1,0 +1,39 @@
+{
+  "environment": "time_driven_executed_path_v4",
+  "customer_count": 20,
+  "vehicle_count": 4,
+  "decision_intervals": 10,
+  "instances_per_dynamic_rate": 100,
+  "test_seed": 20260826,
+  "training_seed_per_method": {
+    "DVNDA": 1234,
+    "Shared-DVNDA": 1234,
+    "PM-Shared-DVNDA": 1234
+  },
+  "checkpoints": {
+    "DVNDA": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\executed_path_dvnda_n20_m4\\best.pt",
+      "sha256": "3a76aa7dfacfb76599622588a99565055c3c89924c3e2edad53ca121c4cd9045",
+      "epoch": 10,
+      "selector": "independent",
+      "train_vehicle_policy": "sample_logp"
+    },
+    "Shared-DVNDA": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\latest_shared_dvnda_n20_m4\\best.pt",
+      "sha256": "485c075812dfe9e0af2e99b4220563363e4424e6ff9d769d965b4f149e40e24c",
+      "epoch": 5,
+      "selector": "shared",
+      "train_vehicle_policy": "sample_logp"
+    },
+    "PM-Shared-DVNDA": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\latest_pm_shared_dvnda_n20_m4\\best.pt",
+      "sha256": "b5dbb918a2f2555f3c25e605e329ac0a902cd90ed38ab1eba9c036095038e699",
+      "epoch": 8,
+      "selector": "shared_wide",
+      "train_vehicle_policy": "sample_logp"
+    }
+  },
+  "claim_limit": "One matched training seed; 100 paired test instances quantify conditional test-set variation but not across-training-seed uncertainty.",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 4070 SUPER"
+}

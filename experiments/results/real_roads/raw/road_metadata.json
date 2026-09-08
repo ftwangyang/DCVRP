@@ -1,0 +1,32 @@
+[
+  {
+    "city": "Vienna",
+    "nodes": 19862,
+    "directed_edges": 41525,
+    "oneway_edge_fraction": 0.11277543648404575,
+    "speed_min_kph": 5.0,
+    "speed_median_kph": 25.0,
+    "speed_max_kph": 50.0,
+    "osm_timestamp": "2026-08-21T02:55:59Z"
+  },
+  {
+    "city": "London",
+    "nodes": 24146,
+    "directed_edges": 52352,
+    "oneway_edge_fraction": 0.08656784841075794,
+    "speed_min_kph": 8.04672,
+    "speed_median_kph": 25.0,
+    "speed_max_kph": 32.18688,
+    "osm_timestamp": "2026-08-21T02:55:59Z"
+  },
+  {
+    "city": "New_York",
+    "nodes": 28049,
+    "directed_edges": 64067,
+    "oneway_edge_fraction": 0.06647728159582937,
+    "speed_min_kph": 8.04672,
+    "speed_median_kph": 25.0,
+    "speed_max_kph": 56.327040000000004,
+    "osm_timestamp": "2026-08-21T02:56:55Z"
+  }
+]

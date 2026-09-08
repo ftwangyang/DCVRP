@@ -1,0 +1,368 @@
+{
+  "protocol": {
+    "protocol_name": "dcvrp_table1_n20_released_semantics_v1",
+    "instance": {
+      "customer_count": 20,
+      "vehicle_count": 4,
+      "vehicle_capacity": 150,
+      "vehicle_speed": 1,
+      "horizon_minutes": 480,
+      "location_range_integer_inclusive": [
+        0,
+        100
+      ],
+      "demand_range_integer_inclusive": [
+        5,
+        40
+      ],
+      "service_duration_range_integer_inclusive": [
+        10,
+        30
+      ],
+      "dynamic_rates": [
+        0.1,
+        0.25,
+        0.5,
+        0.75
+      ],
+      "dynamic_membership": "independent Bernoulli(phi) per customer",
+      "disclosure_sampling": "per-slot rates lambda_i = linspace(1, 480, 20); t_i ~ Poisson(lambda_i) clipped to [1, 480]; static customers receive 0",
+      "disclosure_mean_rate": 240.5,
+      "normalization": "coordinates min-max normalized over the generated batch; demand divided by 150; service and disclosure times divided by 480; vehicle speed rescaled to 480/loc_scale"
+    },
+    "environment": {
+      "decision_intervals": 10,
+      "interval_minutes": 48.0,
+      "training_pending_cost": 5.0,
+      "evaluation_pending_cost": 0.0,
+      "cost": "sum of all executed leg distances, penalties excluded",
+      "qos": "fraction of the 20 customers marked served"
+    },
+    "model": {
+      "model_size": 128,
+      "encoder_layers": 3,
+      "attention_heads": 8,
+      "ff_size": 512,
+      "tanh_exploration": 10.0,
+      "selector_size": 64,
+      "selector_heads": 4
+    },
+    "training": {
+      "epochs": 100,
+      "iterations_per_epoch": 1000,
+      "batch_size": 100,
+      "learning_rate": 0.0001,
+      "max_grad_norm": 2.0,
+      "baseline": "rollout",
+      "rollout_count": 3,
+      "rollout_threshold": 0.05,
+      "optimizer": "Adam"
+    },
+    "seeds": {
+      "train": 1234,
+      "validation": 4321,
+      "test": 20260821,
+      "decode": 314159
+    },
+    "splits": {
+      "train": "generated on the fly from the training stream",
+      "validation": "100 instances per dynamic rate",
+      "test": "100 instances per dynamic rate"
+    },
+    "vehicle_selection": {
+      "Greedy": "earliest_idle (with nearest-task node rule, not learned)",
+      "MARDAM": "earliest_idle",
+      "MAAM": "round_robin",
+      "LiDRL": "vehicle_and_route_embedding",
+      "AMCVN": "centralized",
+      "DVNDA": "independent_networks_with_decision_aggregation"
+    },
+    "known_discrepancies": [
+      "data.py calls create_logistics_distribution without batch_size, so the released generator broadcasts one set of customer_count Poisson draws to every instance of a generated batch.  reproduce with disclosure_sharing='released' for Table I and 'independent' for the per-instance sensitivity check.",
+      "train.py calls Environment(data, custs, mask, *env_params), which binds args.pending_cost to segment_count; the released training runs therefore use 5 intervals while eval.py and the manuscript use 10.  This package uses 10 everywhere and reports the 5-interval variant as a sensitivity check.",
+      "The manuscript reports a scalar Poisson rate lambda=(1+T)/2=240.5.  That is the mean of the released per-slot rates linspace(1, T, n), which is the process actually sampled.",
+      "Coordinates are drawn as integers in [0,100] and then min-max normalized over the generated batch, which is equivalent to the unit square stated in the manuscript only up to the discretization and the batch extremes.",
+      "learner.DCVRP_Environment._check_segment_transition advances an interval only once every vehicle has returned to the depot.  Evaluating the trained policies under that rule drives QoS to 10-41 percent, which contradicts the ~100 percent QoS column of Table I, so Table I cannot have been produced under it.  The reported runs therefore let a vehicle continue across an interval boundary; see reproduction/README.md section 8.",
+      "Table I's neural rows are weaker at phi=0.75 than any of the five methods trained under this protocol, which reproduce the low- and moderate-dynamism cells but come in below the manuscript at phi=0.75.  The Greedy row, which involves no training, matches at every rate, so the instance distribution and objective are not the cause; the measured gap is reported as-is rather than tuned away."
+    ]
+  },
+  "evaluation": {
+    "checkpoint_name": "best.pt",
+    "test_seed": 20260821,
+    "test_instances": 100,
+    "decode_seed": 314159,
+    "decoding": "greedy for both vehicle and customer decisions",
+    "timing_repetitions": 1,
+    "tolerance": 0.05
+  },
+  "paper_targets_sha256": "9e05d332a3cc9b3508e83b28717c82e4da3a341d1121701c3bcdecb48fb8e694",
+  "test_data": {
+    "0.10": {
+      "instances": 100,
+      "nodes_sha256": "df99ca266eb05c2723f81838fe0987f09e09044aff958eb8439d0a9fce5496f5",
+      "dynamic_customers_per_instance": 2,
+      "mean_disclosure_minutes_of_dynamic_customers": 256.81500244140625
+    },
+    "0.25": {
+      "instances": 100,
+      "nodes_sha256": "5d07d4cc7747b769df2a576280d6cfeb0e1894634cb9752a1fa8c6de3ec252ce",
+      "dynamic_customers_per_instance": 5,
+      "mean_disclosure_minutes_of_dynamic_customers": 248.65399169921875
+    },
+    "0.50": {
+      "instances": 100,
+      "nodes_sha256": "3e09a11aa999d50d806d2845b857c64e788eeb54192dabfc4fb91db9257615a2",
+      "dynamic_customers_per_instance": 10,
+      "mean_disclosure_minutes_of_dynamic_customers": 238.6929931640625
+    },
+    "0.75": {
+      "instances": 100,
+      "nodes_sha256": "67aeb062ced4e56bdd2aa50b66b891791c7c904fbdd42de6bfd10c99ba066e29",
+      "dynamic_customers_per_instance": 15,
+      "mean_disclosure_minutes_of_dynamic_customers": 240.774658203125
+    }
+  },
+  "resources": {
+    "MARDAM": {
+      "inference_peak_allocated_bytes": 36943360,
+      "parameters_total": 743040,
+      "parameters_trainable": 743040,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 0,
+      "checkpoint": {
+        "path": "experiments\\checkpoints\\repro100\\MARDAM\\best.pt",
+        "sha256": "2c45feda9a1aa6cc0cd0d6222aadfc2c80d454877d3b3ca9900c773d0f1e422e",
+        "selected_epoch": 79,
+        "epochs_configured": 100,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 7900,
+        "selector": "earliest_available",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null
+      },
+      "vehicle_selection": "earliest_idle"
+    },
+    "MAAM": {
+      "inference_peak_allocated_bytes": 44854272,
+      "parameters_total": 743040,
+      "parameters_trainable": 743040,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 0,
+      "checkpoint": {
+        "path": "experiments\\checkpoints\\repro100\\MAAM\\best.pt",
+        "sha256": "585119ac0a331e8259cd7d8d2e1c95cf32f6b3eb1095805062dbcee6cef2c115",
+        "selected_epoch": 11,
+        "epochs_configured": 100,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 1100,
+        "selector": "round_robin",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null
+      },
+      "vehicle_selection": "round_robin"
+    },
+    "LiDRL": {
+      "inference_peak_allocated_bytes": 47304704,
+      "parameters_total": 893444,
+      "parameters_trainable": 893444,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 150404,
+      "checkpoint": {
+        "path": "experiments\\checkpoints\\repro100\\LiDRL\\best.pt",
+        "sha256": "7d56fb0247c11c2f0e6f5d5be09e10de806ff7bb603e89660e03fb793206d543",
+        "selected_epoch": 66,
+        "epochs_configured": 100,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 6600,
+        "selector": "lidrl_tour_history",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null
+      },
+      "vehicle_selection": "vehicle_and_route_embedding"
+    },
+    "AMCVN": {
+      "inference_peak_allocated_bytes": 46818816,
+      "parameters_total": 826881,
+      "parameters_trainable": 826881,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 83841,
+      "checkpoint": {
+        "path": "experiments\\checkpoints\\repro100\\AMCVN\\best.pt",
+        "sha256": "0c741735a4402bb386fbc7838050ca8df8f7e137ee8e819f5fd2301bcb21c384",
+        "selected_epoch": 36,
+        "epochs_configured": 100,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 3600,
+        "selector": "centralized",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null
+      },
+      "vehicle_selection": "centralized"
+    },
+    "DVNDA": {
+      "inference_peak_allocated_bytes": 48218112,
+      "parameters_total": 926596,
+      "parameters_trainable": 926596,
+      "parameters_shared_encoder_decoder": 743040,
+      "parameters_vehicle_selector": 183556,
+      "checkpoint": {
+        "path": "experiments\\checkpoints\\repro100\\DVNDA\\best.pt",
+        "sha256": "cd1e2b9a371d9f557dc142b08e62c1e6e756d5eb668d974885251533dd7a5699",
+        "selected_epoch": 97,
+        "epochs_configured": 100,
+        "steps_per_epoch": 100,
+        "batch_size": 100,
+        "parameter_updates_at_selection": 9700,
+        "selector": "independent",
+        "train_vehicle_policy": "sample_logp",
+        "learning_rate": 0.0001,
+        "baseline_update_interval": 100,
+        "train_seed": 1234,
+        "training_seconds": null
+      },
+      "vehicle_selection": "independent_networks_with_decision_aggregation"
+    }
+  },
+  "environment": {
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python": "3.9.13",
+    "torch": "2.5.1+cu121",
+    "numpy": "1.26.4",
+    "pandas": "2.3.3",
+    "cuda": "12.1",
+    "gpu": "NVIDIA GeForce RTX 4070 SUPER",
+    "gpu_total_memory_bytes": 12878086144
+  },
+  "worst_cell_absolute_percentage_error": 0.26169832250225666,
+  "mean_absolute_percentage_error": 0.08822705098185926,
+  "cells_outside_tolerance": [
+    {
+      "method": "MARDAM",
+      "dynamic_rate": 0.1,
+      "cost_mean": 8.389437675476074,
+      "paper_cost_mean": 8.91,
+      "cost_relative_error": -0.05842450331357196
+    },
+    {
+      "method": "MARDAM",
+      "dynamic_rate": 0.25,
+      "cost_mean": 9.32873821258545,
+      "paper_cost_mean": 9.85,
+      "cost_relative_error": -0.05291997841772089
+    },
+    {
+      "method": "MARDAM",
+      "dynamic_rate": 0.5,
+      "cost_mean": 10.847552299499512,
+      "paper_cost_mean": 11.45,
+      "cost_relative_error": -0.05261551969436573
+    },
+    {
+      "method": "MARDAM",
+      "dynamic_rate": 0.75,
+      "cost_mean": 11.773816108703613,
+      "paper_cost_mean": 12.81,
+      "cost_relative_error": -0.08088867223234875
+    },
+    {
+      "method": "MAAM",
+      "dynamic_rate": 0.1,
+      "cost_mean": 9.594596862792969,
+      "paper_cost_mean": 8.83,
+      "cost_relative_error": 0.08659081118833156
+    },
+    {
+      "method": "MAAM",
+      "dynamic_rate": 0.25,
+      "cost_mean": 10.183357238769531,
+      "paper_cost_mean": 9.68,
+      "cost_relative_error": 0.051999714748918624
+    },
+    {
+      "method": "MAAM",
+      "dynamic_rate": 0.75,
+      "cost_mean": 11.776567459106445,
+      "paper_cost_mean": 12.72,
+      "cost_relative_error": -0.07416922491301536
+    },
+    {
+      "method": "LiDRL",
+      "dynamic_rate": 0.1,
+      "cost_mean": 8.030596733093262,
+      "paper_cost_mean": 8.67,
+      "cost_relative_error": -0.07374893505268032
+    },
+    {
+      "method": "LiDRL",
+      "dynamic_rate": 0.25,
+      "cost_mean": 8.662668228149414,
+      "paper_cost_mean": 9.45,
+      "cost_relative_error": -0.08331553141276038
+    },
+    {
+      "method": "LiDRL",
+      "dynamic_rate": 0.5,
+      "cost_mean": 9.78628158569336,
+      "paper_cost_mean": 11.01,
+      "cost_relative_error": -0.1111460866763524
+    },
+    {
+      "method": "LiDRL",
+      "dynamic_rate": 0.75,
+      "cost_mean": 10.792344093322754,
+      "paper_cost_mean": 12.52,
+      "cost_relative_error": -0.13799168583684074
+    },
+    {
+      "method": "AMCVN",
+      "dynamic_rate": 0.25,
+      "cost_mean": 8.181337356567383,
+      "paper_cost_mean": 9.23,
+      "cost_relative_error": -0.1136145875874992
+    },
+    {
+      "method": "AMCVN",
+      "dynamic_rate": 0.5,
+      "cost_mean": 8.49539566040039,
+      "paper_cost_mean": 10.75,
+      "cost_relative_error": -0.2097306362418241
+    },
+    {
+      "method": "AMCVN",
+      "dynamic_rate": 0.75,
+      "cost_mean": 8.881769180297852,
+      "paper_cost_mean": 12.03,
+      "cost_relative_error": -0.26169832250225666
+    },
+    {
+      "method": "DVNDA",
+      "dynamic_rate": 0.5,
+      "cost_mean": 9.602091789245605,
+      "paper_cost_mean": 10.47,
+      "cost_relative_error": -0.08289476702525267
+    },
+    {
+      "method": "DVNDA",
+      "dynamic_rate": 0.75,
+      "cost_mean": 10.491157531738281,
+      "paper_cost_mean": 11.78,
+      "cost_relative_error": -0.10940937761135128
+    }
+  ]
+}

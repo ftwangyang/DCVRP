@@ -1,0 +1,34 @@
+{
+  "architecture_test": {
+    "replicate_unit": "training seed",
+    "n_training_seeds": 3,
+    "independent_minus_shared_mean": -0.35387305000000185,
+    "independent_minus_shared_ci95_low": -17.370336992173225,
+    "independent_minus_shared_ci95_high": 16.662590892173224,
+    "paired_t_p_two_sided": 0.9368560222126588,
+    "shared_selector_parameter_reduction_percent": 75.0,
+    "shared_total_parameter_reduction_percent": 23.18088005715344
+  },
+  "vehicle_id_invariance": {
+    "permutations_exhaustive": true,
+    "vehicle_count": 4,
+    "permutation_count": 24,
+    "rate_specific_instances": 400,
+    "nonidentity_instance_comparisons": 9200,
+    "max_abs_distance_difference": 0.0,
+    "max_abs_qos_percentage_point_difference": 0.0,
+    "max_abs_completion_time_difference_min": 0.0
+  },
+  "checkpoint": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\paper_aligned_n20_masked_raw_smoke\\best.pt",
+  "checkpoint_sha256": "0cf39f2f7d955c71cb70b28653be3ab78e1240db219d6c553a44358e97cc39cb",
+  "checkpoint_epoch": 10,
+  "instances_per_dynamic_rate": 100,
+  "dynamic_rates": [
+    0.1,
+    0.25,
+    0.5,
+    0.75
+  ],
+  "decode": "greedy customer; Eq. (27) vehicle argmax",
+  "device": "cuda"
+}

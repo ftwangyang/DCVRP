@@ -1,0 +1,46 @@
+{
+  "release": "dvnda_manuscript_closest_20260907",
+  "status": "frozen_reference_manifest",
+  "selected_version": "experiments.dvnda_detailed_requirements_v15",
+  "selection_basis": "closest completed manuscript-aligned protocol; Table I was audit-only",
+  "primary_estimator": "mean of five preregistered best_last.pt sampled-100 test means",
+  "training_seeds": [1234, 2234, 3234, 4234, 5234],
+  "representative_seed": 1234,
+  "representative_seed_selection": "minimum frozen independent-validation distance before test summaries were loaded",
+  "primary_five_seed_result": {
+    "dynamic_rates": [0.10, 0.25, 0.50, 0.75],
+    "cost_mean": [8.2604, 8.9645, 9.9821, 10.8648],
+    "between_seed_sd": [0.1210, 0.0988, 0.0751, 0.0908],
+    "table_i": [8.31, 8.95, 10.47, 11.78],
+    "error_percent": [-0.60, 0.16, -4.66, -7.77],
+    "mape_percent": 3.30,
+    "worst_absolute_error_percent": 7.77,
+    "cost_identity": "PASS"
+  },
+  "representative_checkpoint": {
+    "path": "experiments/checkpoints/dvnda_detailed_requirements_v15_five_seed_10x1000_20260905/seed_1234/DVNDA/best_last.pt",
+    "size_bytes": 9754682,
+    "sha256": "3c915db067d5f1e789b9f70e9a163d644565bf75296fb04610a3f5d82389be70"
+  },
+  "source_sha256": {
+    "experiments/dvnda_detailed_requirements_v15/__init__.py": "bc0d290a35b1ea63bdad0d139228093586f92b05875b394d0df819baead73425",
+    "experiments/dvnda_detailed_requirements_v15/audit_milestones.py": "c3645652f039ade8dbb35a5aa50ae6453bfa2a4509d9e0586273a381c6e2228f",
+    "experiments/dvnda_detailed_requirements_v15/environment.py": "42f2c20d361be2b0839091a096b81cd03fefd9b91147a2005df8f4d4010d14c4",
+    "experiments/dvnda_detailed_requirements_v15/instances.py": "2280b2a8462aad5e08e242f03ea56fe81442f195b64f2b3bbb820c05bf6286ab",
+    "experiments/dvnda_detailed_requirements_v15/multi_seed.py": "69a49cb2ec62cbafa2fb9d79c0f729331233613cd35e1ad5c000658d4543a640",
+    "experiments/dvnda_detailed_requirements_v15/protocol.py": "aee3a0df730a0f2d66c095f3dec145667e0b839acb890b53e2e7a7a6a5ce599b",
+    "experiments/dvnda_detailed_requirements_v15/train.py": "2814a153ded7481d2ac2ac870a3270194e4db14b79e36311630c0a8b64bcc9d9"
+  },
+  "evidence_sha256": {
+    "experiments/results/dvnda_detailed_requirements_v15_five_seed_10x1000_20260905/FIVE_SEED_PREREGISTRATION.json": "232296f4d919458bf93cf85483f8a1d2fff9bd39dbed9495cdb603f005bea751",
+    "experiments/results/dvnda_detailed_requirements_v15_five_seed_10x1000_20260905/FIVE_SEED_AUDIT.md": "3fed7b0d0c0f706dc6bbe62914ff40b0e3031dc0bbd021fe015c1bc12d765f6a",
+    "experiments/results/dvnda_detailed_requirements_v15_five_seed_10x1000_20260905/VALIDATION_SEED_SELECTION.json": "01b47900f6d6f1fa069abff8cb06f66716e80f6085c74da19483baf3ce800969"
+  },
+  "integrity_rules": {
+    "post_hoc_seed_selection": false,
+    "table_i_checkpoint_selection": false,
+    "cost_scaling": false,
+    "measured_value_substitution": false,
+    "target_shaped_loss": false
+  }
+}

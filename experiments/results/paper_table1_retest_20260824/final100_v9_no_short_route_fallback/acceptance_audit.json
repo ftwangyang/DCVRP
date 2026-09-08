@@ -1,0 +1,49 @@
+{
+  "passed": true,
+  "failures": [],
+  "raw_rows": 6000,
+  "expected_raw_rows": 6000,
+  "duplicate_rows": 0,
+  "summary_matches_raw": true,
+  "groups": 60,
+  "instances_per_group": [
+    100
+  ],
+  "assignment_policy": "fixed-greedy",
+  "short_route_fallback": null,
+  "environment": "time_driven_executed_path_multivehicle_v9",
+  "fleet_definition_m_equals_n_over_5": true,
+  "minimum_group_qos_percent": 99.95,
+  "all_cost_sequences_strictly_increasing": true,
+  "same_instance_greedy_mape_vs_paper_percent": 2.180335416476427,
+  "same_instance_greedy_max_ape_vs_paper_percent": 4.352068685233184,
+  "maximum_75pct_gap_vs_same_instance_greedy_percent": 0.9346949367959869,
+  "maximum_75pct_ape_vs_paper_greedy_percent": 4.662911989266643,
+  "method_error_vs_paper_greedy": [
+    {
+      "method": "Adaptive LNS",
+      "mape_percent": 3.45583081433565,
+      "max_ape_percent": 9.481373616272263
+    },
+    {
+      "method": "Greedy (same instances)",
+      "mape_percent": 2.1803354164764266,
+      "max_ape_percent": 4.352068685233184
+    },
+    {
+      "method": "OR-Tools",
+      "mape_percent": 2.873353194171049,
+      "max_ape_percent": 6.686288657766142
+    },
+    {
+      "method": "Regret insertion",
+      "mape_percent": 3.383721178184523,
+      "max_ape_percent": 8.976262929627461
+    },
+    {
+      "method": "Tabu Search",
+      "mape_percent": 2.877936003147972,
+      "max_ape_percent": 6.686288657766142
+    }
+  ]
+}

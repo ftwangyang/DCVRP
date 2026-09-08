@@ -1,0 +1,15 @@
+{
+  "environment": "periodic_static_dvnda_v3",
+  "dvnda_protocol": "10-interval periodic static re-optimization",
+  "greedy_protocol": "event-driven nearest visible feasible task when idle",
+  "same_test_instances": true,
+  "same_travel_speed": true,
+  "normalized_vehicle_speed": 480.0,
+  "physical_speed_coordinate_units_per_minute": 1.0,
+  "test_seed": 20260821,
+  "test_instances_per_rate": 100,
+  "timing": "one unreported CUDA warm-up batch, then wall-clock batch time",
+  "checkpoint": "experiments\\checkpoints\\periodic_static_dvnda_n20_m4\\best.pt",
+  "checkpoint_epoch": 10,
+  "comparison_caveat": "DVNDA and Greedy use the requested different execution protocols; therefore this is not an environment-identical algorithm comparison."
+}

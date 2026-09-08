@@ -1,0 +1,102 @@
+%% Reviewer response
+\noindent\textbf{Response:}
+We thank the reviewer for this helpful suggestion. We have added three
+zero-centred summary plots for Tables~I, II, and IV. For each experimental
+condition, we calculate
+\[
+\Delta=100\frac{C_{\mathrm{best\ baseline}}-C_{\mathrm{DVNDA}}}
+{C_{\mathrm{best\ baseline}}}.
+\]
+Each plot uses a single forest-plot axis: the point shows the mean percentage
+difference, the horizontal line shows its approximate 95\% confidence
+interval, and the dashed vertical line denotes zero difference. Values to the
+right of zero indicate a lower DVNDA cost; values to the left indicate a lower
+cost for the best baseline. This compact, single-colour presentation avoids
+visual clutter while showing both effect size and uncertainty. The Table~I
+plot is placed in the main manuscript, whereas the Table~II and IV plots are
+placed in the Supplementary Material. The complete tables are retained for
+exact values and method-level comparisons.
+
+%% Main-text insertion after Table I
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figure/main_table_I_improvement.pdf}
+  \caption{\textbf{Relative routing-cost difference between DVNDA and the best
+  baseline on synthetic instances.} For every dynamic rate and problem size,
+  $\Delta=100(C_{\mathrm{best\ baseline}}-C_{\mathrm{DVNDA}})/
+  C_{\mathrm{best\ baseline}}$. Points to the right of zero indicate that
+  DVNDA has the lower mean cost; points to the left indicate that the best
+  non-DVNDA method in Table~\ref{tab:2} has the lower mean cost. Horizontal
+  lines denote approximate 95\% confidence intervals
+  obtained by an independent-sample delta method from the reported means and
+  standard deviations ($n=100$ instances per condition). Row labels give the
+  customer count and dynamic rate, separated by a vertical bar. An interval crossing
+  zero does not establish a resolved difference under this approximation.}
+  \label{fig:table1_improvement}
+\end{figure}
+
+%% Concise main-text interpretation
+Figure~\ref{fig:table1_improvement} separates mean direction from uncertainty.
+DVNDA has the lower mean cost in 9 of the 12 conditions, whereas the best
+baseline has the lower mean cost in the three $\varphi=10\%$ conditions. At
+$\varphi=10\%$, DVNDA is $1.96\%$--$2.77\%$ more costly than the best baseline.
+From $\varphi=25\%$ onward, DVNDA is consistently less costly, with mean
+reductions of $0.71\%$--$2.60\%$. However, all approximate 95\% intervals cross
+zero. Thus, Table~I supports a consistent mean advantage at moderate and high
+dynamic rates, but not a statistically resolved advantage from the available
+summary statistics.
+
+%% Supplementary Figure S1 (Table II)
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figure/supp_table_II_improvement.pdf}
+  \caption{\textbf{Relative routing-cost difference on Vienna road-network
+  instances.} The signed percentage difference is
+  $\Delta=100(C_{\mathrm{best\ baseline}}-C_{\mathrm{DVNDA}})/
+  C_{\mathrm{best\ baseline}}$. Points to the right of zero indicate a lower
+  DVNDA mean cost; points to the left indicate a lower mean cost for the best
+  non-DVNDA method in Table~\ref{tab:zs}. Horizontal lines denote approximate
+  95\% confidence intervals
+  obtained by an independent-sample delta method from the reported means and
+  standard deviations ($n=100$ instances per condition). Row labels give the
+  customer count and dynamic rate, separated by a vertical bar.}
+  \label{fig:supp_table2_improvement}
+\end{figure}
+
+On the Vienna instances, DVNDA has the lower mean cost in 9 of 12 conditions.
+The three exceptions again occur at $\varphi=10\%$, where the best baseline is
+$2.20\%$--$3.27\%$ less costly. At $\varphi=25\%$--$75\%$, DVNDA reduces the
+mean cost by $0.93\%$--$5.87\%$; five of the corresponding nine intervals lie
+entirely above zero. The real-road results therefore provide stronger evidence
+of an advantage under moderate and high dynamism than the synthetic results.
+
+%% Supplementary Figure S2 (Table IV)
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figure/supp_table_IV_improvement.pdf}
+  \caption{\textbf{Relative routing-cost difference under unseen spatial
+  distributions.} Clustered and mixed instances contain 20 customers. The
+  signed percentage difference is
+  $\Delta=100(C_{\mathrm{best\ baseline}}-C_{\mathrm{DVNDA}})/
+  C_{\mathrm{best\ baseline}}$. Points to the right of zero indicate a lower
+  DVNDA mean cost; points to the left indicate a lower mean cost for the best
+  non-DVNDA method in Table~\ref{fbfh}. Horizontal lines denote approximate
+  95\% confidence intervals
+  obtained by an independent-sample delta method from the reported means and
+  standard deviations ($n=100$ instances per condition). Row labels give the
+  spatial distribution and dynamic rate, separated by a vertical bar.}
+  \label{fig:supp_table4_improvement}
+\end{figure}
+
+DVNDA has the lower mean cost in all eight cross-distribution conditions. The
+reduction is $4.24\%$--$8.12\%$ on clustered instances and
+$2.50\%$--$11.96\%$ on mixed instances. Five of eight intervals lie entirely
+above zero, while the remaining three cross zero. These results support
+cross-distribution robustness while preserving the uncertainty of individual
+comparisons.
+
+%% Statistical note for the authors
+%% The manuscript tables contain marginal means and SDs but not paired
+%% per-instance costs. The intervals above are therefore approximate. If the
+%% paired raw costs are available, replace them with paired bootstrap 95% CIs
+%% before final submission; the plotting code documents the replacement point.

@@ -1,0 +1,71 @@
+{
+  "checkpoint": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\dvnda_detailed_requirements_v3_100x1000_20260902\\DVNDA\\best.pt",
+  "checkpoint_name": "best.pt",
+  "checkpoint_epoch": 9,
+  "instances_per_rate": 100,
+  "customer_rollouts": 1,
+  "customer_decode": "greedy",
+  "vehicle_decode": "deterministic argmax",
+  "cost": "actual retained/final route distance including final depot returns",
+  "rows": [
+    {
+      "dynamic_rate": 0.1,
+      "cost_mean": 8.39531135559082,
+      "cost_sd": 1.1307545900344849,
+      "ci95_low": 8.170945113094072,
+      "ci95_high": 8.619677598087568,
+      "qos_percent": 99.85000491142273,
+      "paper_cost": 8.31,
+      "relative_error": 0.010266107772661792,
+      "absolute_error_percent": 1.0266107772661792,
+      "within_1_percent": false,
+      "within_5_percent": true
+    },
+    {
+      "dynamic_rate": 0.25,
+      "cost_mean": 9.422839164733887,
+      "cost_sd": 1.2201826572418213,
+      "ci95_low": 9.180728453552343,
+      "ci95_high": 9.66494987591543,
+      "qos_percent": 99.90000128746033,
+      "paper_cost": 8.95,
+      "relative_error": 0.05283119159037852,
+      "absolute_error_percent": 5.283119159037852,
+      "within_1_percent": false,
+      "within_5_percent": false
+    },
+    {
+      "dynamic_rate": 0.5,
+      "cost_mean": 10.632070541381836,
+      "cost_sd": 1.2884836196899414,
+      "ci95_low": 10.376407437454374,
+      "ci95_high": 10.887733645309298,
+      "qos_percent": 99.85000491142273,
+      "paper_cost": 10.47,
+      "relative_error": 0.015479516846402586,
+      "absolute_error_percent": 1.5479516846402586,
+      "within_1_percent": false,
+      "within_5_percent": true
+    },
+    {
+      "dynamic_rate": 0.75,
+      "cost_mean": 11.418042182922363,
+      "cost_sd": 1.454961895942688,
+      "ci95_low": 11.129346177223505,
+      "ci95_high": 11.706738188621221,
+      "qos_percent": 99.85000491142273,
+      "paper_cost": 11.78,
+      "relative_error": -0.030726470040546405,
+      "absolute_error_percent": 3.0726470040546405,
+      "within_1_percent": false,
+      "within_5_percent": true
+    }
+  ],
+  "worst_absolute_error_percent": 5.283119159037852,
+  "mape_percent": 2.7325821562497326,
+  "all_within_1_percent": false,
+  "all_within_5_percent": false,
+  "epoch20_gate_passed": null,
+  "max_cost_identity_error": 1.9073486328125e-06,
+  "cost_identity_passed": true
+}

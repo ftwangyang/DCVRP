@@ -1,0 +1,71 @@
+{
+  "checkpoint": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\dvnda_paper_faithful_v2_100x1000_20260901\\DVNDA\\best_last.pt",
+  "checkpoint_sha256": "390176cc23a280010738aa4c1b93b6d5a5bf5a54c744b69b5b3d72db4b808b5b",
+  "checkpoint_epoch": 7,
+  "cost_definition": "sum of final dispatched/executed route legs, including physical returns to the depot; provisional suffixes destroyed at interval boundaries are refunded; alpha*unserved is excluded at inference",
+  "inference_pending_cost": 0.0,
+  "all_cost_cells_better_than_or_equal_to_paper": true,
+  "all_cost_identities_pass": true,
+  "rows": [
+    {
+      "dynamic_rate": 0.1,
+      "instances": 100,
+      "executed_cost_mean": 8.005912780761719,
+      "executed_cost_sd": 1.0518618822097778,
+      "paper_cost_mean": 8.31,
+      "relative_difference": -0.03659292650280166,
+      "better_than_or_equal_to_paper": true,
+      "qos_percent": 99.84999895095825,
+      "discarded_provisional_distance_mean": 3.3425028324127197,
+      "proposed_distance_mean": 11.34841537475586,
+      "max_abs_reward_cost_minus_executed": 1.430511474609375e-06,
+      "max_abs_proposed_minus_executed_plus_discarded": 4.76837158203125e-07,
+      "max_final_depot_position_error": 0.0
+    },
+    {
+      "dynamic_rate": 0.25,
+      "instances": 100,
+      "executed_cost_mean": 8.623887062072754,
+      "executed_cost_sd": 1.0574302673339844,
+      "paper_cost_mean": 8.95,
+      "relative_difference": -0.03643719976840731,
+      "better_than_or_equal_to_paper": true,
+      "qos_percent": 99.89999532699585,
+      "discarded_provisional_distance_mean": 2.968093156814575,
+      "proposed_distance_mean": 11.59197998046875,
+      "max_abs_reward_cost_minus_executed": 1.9073486328125e-06,
+      "max_abs_proposed_minus_executed_plus_discarded": 4.76837158203125e-07,
+      "max_final_depot_position_error": 0.0
+    },
+    {
+      "dynamic_rate": 0.5,
+      "instances": 100,
+      "executed_cost_mean": 8.991959571838379,
+      "executed_cost_sd": 1.0850203037261963,
+      "paper_cost_mean": 10.47,
+      "relative_difference": -0.14116909533539845,
+      "better_than_or_equal_to_paper": true,
+      "qos_percent": 99.84999299049377,
+      "discarded_provisional_distance_mean": 2.7359955310821533,
+      "proposed_distance_mean": 11.727954864501953,
+      "max_abs_reward_cost_minus_executed": 1.9073486328125e-06,
+      "max_abs_proposed_minus_executed_plus_discarded": 4.76837158203125e-07,
+      "max_final_depot_position_error": 0.0
+    },
+    {
+      "dynamic_rate": 0.75,
+      "instances": 100,
+      "executed_cost_mean": 8.93862533569336,
+      "executed_cost_sd": 1.1560205221176147,
+      "paper_cost_mean": 11.78,
+      "relative_difference": -0.2412032821992054,
+      "better_than_or_equal_to_paper": true,
+      "qos_percent": 99.89999532699585,
+      "discarded_provisional_distance_mean": 2.7544426918029785,
+      "proposed_distance_mean": 11.693066596984863,
+      "max_abs_reward_cost_minus_executed": 2.86102294921875e-06,
+      "max_abs_proposed_minus_executed_plus_discarded": 9.5367431640625e-07,
+      "max_final_depot_position_error": 0.0
+    }
+  ]
+}

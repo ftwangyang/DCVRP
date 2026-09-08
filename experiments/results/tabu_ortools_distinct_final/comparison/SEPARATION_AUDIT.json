@@ -1,0 +1,32 @@
+{
+  "Random": {
+    "paired_instances": 1200,
+    "same_cost_instances": 831,
+    "same_cost_percent": 69.25,
+    "same_cost_and_qos_percent": 69.25,
+    "tabu_lower_cost_instances": 169,
+    "ortools_lower_cost_instances": 200,
+    "mean_absolute_paired_cost_difference": 0.24951368246556366,
+    "maximum_absolute_paired_cost_difference": 3.8818383476936162
+  },
+  "Vienna": {
+    "paired_instances": 1200,
+    "same_cost_instances": 795,
+    "same_cost_percent": 66.25,
+    "same_cost_and_qos_percent": 66.25,
+    "tabu_lower_cost_instances": 199,
+    "ortools_lower_cost_instances": 206,
+    "mean_absolute_paired_cost_difference": 0.20967543914470943,
+    "maximum_absolute_paired_cost_difference": 3.329464463723907
+  },
+  "before_fix_same_cost_percent": {
+    "Random": 99.75,
+    "Vienna": 99.66666666666667
+  },
+  "checks": {
+    "2400_paired_instances": true,
+    "tabu_source_does_not_call_ortools": true,
+    "both_datasets_have_distinct_results": true
+  },
+  "passed": true
+}

@@ -1,0 +1,50 @@
+{
+  "protocol_name": "dcvrp_table1_n20_manuscript_semantics_v2",
+  "generator": "reproduction.instances.generate_manuscript_split",
+  "seeds": {
+    "train": 1234,
+    "validation": 4321,
+    "test": 20260821
+  },
+  "splits": {
+    "validation": {
+      "path": "reproduction\\data\\validation_n20_m4_seed4321.pt",
+      "seed": 4321,
+      "instances_per_rate": 100,
+      "size_bytes": 170536,
+      "file_sha256": "c6c5153e2068676b845e799d780b1d97622e24e6b8c0ac8a8597ac29d36d2e28",
+      "nodes_sha256": {
+        "0.10": "6acf9e8bd03137ae5e2c7a711559e6696e49988ad24e347d95fd1f08fc60ddd4",
+        "0.25": "2eb8188a306bd67e9c5aabb7d59599ea793150be39691eb26b898e0d1690ab5a",
+        "0.50": "566c9d396eec976832fa01d395175326a7fe793e75502d558ea27a9f0ca52958",
+        "0.75": "46ba56f03e4c2805b3a85a0c9d2350a4773657249cfc45f41dcf39dab5dddcc3"
+      }
+    },
+    "test": {
+      "path": "reproduction\\data\\test_n20_m4_seed20260821.pt",
+      "seed": 20260821,
+      "instances_per_rate": 100,
+      "size_bytes": 170520,
+      "file_sha256": "07de3212adc5e85e4bd5dec591c05178b9fcd6ebc031bbb34143ca6dc64f3093",
+      "nodes_sha256": {
+        "0.10": "1fd3e4196b50446bec5f0a9f219d951ab0f6bd9780a37f5746fc88f79e1c8b21",
+        "0.25": "2e1ec3bef77d5fd9f6d77638817ffbb772405f71745b022158056527a0a18fc3",
+        "0.50": "44b738375d751f9ca662105ec89e036b1ccec1d6276515016fadc6e06376e324",
+        "0.75": "e088d94835600d767cdf0e9f43ffa0ead23c00debd738f4f6641dd34638b8e65"
+      }
+    },
+    "train_sample": {
+      "path": "reproduction\\data\\train_sample_n20_m4_seed1234.pt",
+      "seed": 1234,
+      "instances_per_rate": 100000,
+      "size_bytes": 168002680,
+      "file_sha256": "beca6fa53662162b6dd4fd2f160a160873299b811a9416c3554f0f5da714c01d",
+      "nodes_sha256": {
+        "0.10": "ea27be4899044ba470c37b50d1fe960eaa485e39547607c99ddd8e463df3f5ea",
+        "0.25": "dcc270ccd0e4de4bbbe1901150427a7d5ae06bd9fd7eb17f95efffbe79102f19",
+        "0.50": "518eb6bd73730f74677f41e752e810a4e0a404a283358684b45f3d4f717cc482",
+        "0.75": "433035b75a7b242b56cfee531693a527ebee95ca0e1b86572eed2a2a82213e32"
+      }
+    }
+  }
+}

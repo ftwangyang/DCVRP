@@ -1,0 +1,38 @@
+\begin{table*}[t]
+\centering
+\caption{Independent re-run of Table I under the fully specified protocol of the reproducibility package. Reported values are those of Table I; measured values come from a re-training of all five neural methods and a re-run of Greedy on the fixed test split. A negative error means the re-run is cheaper than the reported value.}
+\label{tab:reproduction_n20}
+\begin{tabular}{cllccc}
+\toprule
+Dynamic rate & Method & Reported cost & Measured cost & Rel. error & Measured QoS \\
+\midrule
+10\% & Greedy & 9.07 $\pm$ 1.12 & 9.03 $\pm$ 1.01 & -0.4\% & 99.70\% \\
+ & MARDAM & 8.91 $\pm$ 1.29 & 8.25 $\pm$ 0.96 & -7.5\% & 99.55\% \\
+ & MAAM & 8.83 $\pm$ 1.22 & 8.65 $\pm$ 1.15 & -2.0\% & 99.70\% \\
+ & LiDRL & 8.67 $\pm$ 1.27 & 8.10 $\pm$ 0.97 & -6.5\% & 99.90\% \\
+ & AMCVN & 8.39 $\pm$ 1.29 & 7.79 $\pm$ 0.91 & -7.2\% & 99.75\% \\
+ & DVNDA & 8.31 $\pm$ 1.22 & 7.91 $\pm$ 1.04 & -4.8\% & 99.90\% \\
+\midrule
+25\% & Greedy & 9.69 $\pm$ 1.25 & 9.71 $\pm$ 1.25 & +0.2\% & 99.75\% \\
+ & MARDAM & 9.85 $\pm$ 1.27 & 9.32 $\pm$ 1.12 & -5.4\% & 99.70\% \\
+ & MAAM & 9.68 $\pm$ 1.55 & 9.43 $\pm$ 1.06 & -2.6\% & 99.80\% \\
+ & LiDRL & 9.45 $\pm$ 1.24 & 8.69 $\pm$ 0.96 & -8.0\% & 99.80\% \\
+ & AMCVN & 9.23 $\pm$ 1.23 & 7.85 $\pm$ 0.93 & -14.9\% & 99.70\% \\
+ & DVNDA & 8.95 $\pm$ 1.30 & 8.58 $\pm$ 0.99 & -4.2\% & 99.85\% \\
+\midrule
+50\% & Greedy & 11.25 $\pm$ 1.43 & 11.31 $\pm$ 1.32 & +0.6\% & 99.80\% \\
+ & MARDAM & 11.45 $\pm$ 1.37 & 10.90 $\pm$ 1.30 & -4.8\% & 99.75\% \\
+ & MAAM & 11.32 $\pm$ 1.30 & 10.97 $\pm$ 1.33 & -3.1\% & 99.65\% \\
+ & LiDRL & 11.01 $\pm$ 1.45 & 9.82 $\pm$ 1.19 & -10.8\% & 99.90\% \\
+ & AMCVN & 10.75 $\pm$ 1.54 & 8.36 $\pm$ 1.05 & -22.2\% & 99.70\% \\
+ & DVNDA & 10.47 $\pm$ 1.53 & 9.68 $\pm$ 1.17 & -7.5\% & 99.90\% \\
+\midrule
+75\% & Greedy & 12.43 $\pm$ 1.51 & 12.21 $\pm$ 1.68 & -1.8\% & 99.75\% \\
+ & MARDAM & 12.81 $\pm$ 1.49 & 11.70 $\pm$ 1.47 & -8.7\% & 99.80\% \\
+ & MAAM & 12.72 $\pm$ 1.53 & 11.61 $\pm$ 1.39 & -8.7\% & 99.75\% \\
+ & LiDRL & 12.52 $\pm$ 1.62 & 10.83 $\pm$ 1.42 & -13.5\% & 99.90\% \\
+ & AMCVN & 12.03 $\pm$ 1.47 & 8.69 $\pm$ 1.16 & -27.7\% & 99.70\% \\
+ & DVNDA & 11.78 $\pm$ 1.44 & 10.25 $\pm$ 1.26 & -13.0\% & 99.85\% \\
+\bottomrule
+\end{tabular}
+\end{table*}

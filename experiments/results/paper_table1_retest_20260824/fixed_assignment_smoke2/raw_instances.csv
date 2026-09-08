@@ -1,0 +1,17 @@
+method,customer_count,vehicle_count,dynamic_rate,instance_id,cost,qos_percent,served_customers,unserved_customers,solve_time_s,planning_calls,final_completion_minute,vehicles_used,vehicle_customer_counts,environment
+Adaptive LNS,20,4,0.1,1,9.612889778944192,100.0,20,0,0.1005627,11,480.5786153885153,4,6;5;4;5,time_driven_executed_path_multivehicle_v7
+Adaptive LNS,20,4,0.1,2,10.107953264843188,100.0,20,0,0.08805259999999993,11,480.65701031858544,4,6;5;5;4,time_driven_executed_path_multivehicle_v7
+Adaptive LNS,20,4,0.75,1,9.710059169601255,100.0,20,0,0.029599800000000065,11,507.57169521234033,4,6;7;5;2,time_driven_executed_path_multivehicle_v7
+Adaptive LNS,20,4,0.75,2,14.687176489027676,100.0,20,0,0.013293,11,496.11720375876973,4,8;6;4;2,time_driven_executed_path_multivehicle_v7
+OR-Tools,20,4,0.1,1,8.87644181763756,100.0,20,0,0.11311490000000002,11,480.5366193131014,4,6;5;5;4,time_driven_executed_path_multivehicle_v7
+OR-Tools,20,4,0.1,2,9.500029778948193,100.0,20,0,0.09022320000000006,11,480.9062883833073,4,5;5;5;5,time_driven_executed_path_multivehicle_v7
+OR-Tools,20,4,0.75,1,9.710059169601255,100.0,20,0,0.051683799999999946,11,507.57169521234033,4,6;7;5;2,time_driven_executed_path_multivehicle_v7
+OR-Tools,20,4,0.75,2,14.446948031365656,100.0,20,0,0.035015700000000094,11,496.11720375876973,4,8;6;4;2,time_driven_executed_path_multivehicle_v7
+Regret insertion,20,4,0.1,1,9.612889778944192,100.0,20,0,0.002964400000000089,11,480.5786153885153,4,6;5;4;5,time_driven_executed_path_multivehicle_v7
+Regret insertion,20,4,0.1,2,10.107953264843188,100.0,20,0,0.0030202999999999758,11,480.65701031858544,4,6;5;5;4,time_driven_executed_path_multivehicle_v7
+Regret insertion,20,4,0.75,1,9.710059169601255,100.0,20,0,0.0011195999999999984,11,507.57169521234033,4,6;7;5;2,time_driven_executed_path_multivehicle_v7
+Regret insertion,20,4,0.75,2,14.687176489027676,100.0,20,0,0.0008624999999999883,11,496.11720375876973,4,8;6;4;2,time_driven_executed_path_multivehicle_v7
+Tabu Search,20,4,0.1,1,8.87644181763756,100.0,20,0,0.11382579999999998,11,480.5366193131014,4,6;5;5;4,time_driven_executed_path_multivehicle_v7
+Tabu Search,20,4,0.1,2,9.500029778948193,100.0,20,0,0.08951259999999994,11,480.9062883833073,4,5;5;5;5,time_driven_executed_path_multivehicle_v7
+Tabu Search,20,4,0.75,1,9.710059169601255,100.0,20,0,0.05157539999999994,11,507.57169521234033,4,6;7;5;2,time_driven_executed_path_multivehicle_v7
+Tabu Search,20,4,0.75,2,14.446948031365656,100.0,20,0,0.03779329999999992,11,496.11720375876973,4,8;6;4;2,time_driven_executed_path_multivehicle_v7

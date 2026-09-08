@@ -1,0 +1,4 @@
+selector,seed,additional_training_seconds,peak_memory_bytes,best_continuation_epoch,best_validation_cost,additional_updates,checkpoint
+independent,1234,613.7885673000001,432598016,0,33.49847412109375,160,experiments\checkpoints\production\independent_seed1234.pt
+independent,2345,1161.2208696,422333952,8,29.633840560913086,320,experiments\checkpoints\production\independent_seed2345.pt
+independent,3456,580.7442355999999,426454528,0,33.32693099975586,160,experiments\checkpoints\production\independent_seed3456.pt

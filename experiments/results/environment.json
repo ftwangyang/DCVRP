@@ -1,0 +1,13 @@
+{
+  "python": "3.9.13 (main, Aug 25 2022, 23:51:50) [MSC v.1916 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.19045-SP0",
+  "torch": "2.5.1+cu121",
+  "cuda_available": true,
+  "cuda_runtime": "12.1",
+  "gpu": "NVIDIA GeForce RTX 4070 SUPER",
+  "numpy": "1.26.4",
+  "pandas": "2.3.3",
+  "scipy": "1.10.1",
+  "matplotlib": "3.5.2",
+  "networkx": "2.8.4"
+}

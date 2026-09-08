@@ -1,0 +1,42 @@
+{
+  "checkpoint": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\paper_aligned_n20_masked_raw_smoke\\best.pt",
+  "checkpoint_sha256": "0cf39f2f7d955c71cb70b28653be3ab78e1240db219d6c553a44358e97cc39cb",
+  "checkpoint_epoch": 10,
+  "cities": [
+    "Vienna",
+    "London",
+    "New_York"
+  ],
+  "instances_per_city": 100,
+  "customers": 20,
+  "vehicles": 4,
+  "dynamic_rates": [
+    0.1,
+    0.25,
+    0.5,
+    0.75
+  ],
+  "radius_m": 1200,
+  "seed": 20260822,
+  "device": "cuda",
+  "customer_decode": "best-of-20 sampled",
+  "candidate_selection_objective": "normalized_road_cost + 5 * unserved",
+  "normalized_cost_definition": "sum of normalized edge lengths along the directed fastest-time path; one fixed city bounding-box transform to [0,1]^2",
+  "physical_distance_definition": "sum of kilometres along the same directed fastest-time paths",
+  "driving_time_definition": "sum of travel minutes on executed/committed legs, including final depot return and excluding service, interval waiting, inference, and discarded replanning suffixes",
+  "vehicle_decode": "Eq. (27) argmax",
+  "peak_windows": [
+    [
+      0.2,
+      0.4
+    ],
+    [
+      0.65,
+      0.85
+    ]
+  ],
+  "peak_edge_delay_range": [
+    0.15,
+    0.45
+  ]
+}

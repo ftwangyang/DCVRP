@@ -1,0 +1,62 @@
+{
+  "environment": "time_driven_executed_path_v4/v9",
+  "customer_count": 20,
+  "vehicle_count": 4,
+  "decision_intervals": 10,
+  "horizon_minutes": 480.0,
+  "instances_per_rate": 100,
+  "dynamic_rates": [
+    0.1,
+    0.25,
+    0.5,
+    0.75
+  ],
+  "paired_instances_across_methods_and_rates": true,
+  "test_seed": 20260828,
+  "classical_static_solver_budget_ms_per_update": 100,
+  "neural_timing_repetitions": 5,
+  "metric_scope": "committed/actually executed events only",
+  "mardam_maam_lidrl_amcvn_status": "paper-guided reimplementations, not official checkpoints",
+  "neural_checkpoints": {
+    "MARDAM": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\reviewer3_mardam_n20_m4\\best.pt",
+      "epoch": 9,
+      "selector": "earliest_available"
+    },
+    "MAAM": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\reviewer3_maam_n20_m4\\best.pt",
+      "epoch": 9,
+      "selector": "round_robin"
+    },
+    "LiDRL": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\reviewer3_lidrl_n20_m4\\best.pt",
+      "epoch": 2,
+      "selector": "attention_aggregation"
+    },
+    "AMCVN": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\reviewer3_amcvn_n20_m4\\best.pt",
+      "epoch": 7,
+      "selector": "centralized"
+    },
+    "DVNDA-MO": {
+      "path": "C:\\Users\\wy\\Desktop\\DCVRP-main\\experiments\\checkpoints\\latest_aggregation_n20_m4\\best.pt",
+      "epoch": 10,
+      "selector": "operational_independent"
+    }
+  },
+  "dvnda_mo_status": "validation-calibrated operational variant; original DVNDA checkpoint weights retained; must not replace original DVNDA cost row",
+  "dvnda_mo_calibration": {
+    "selector_timeline_weight": 10000.0,
+    "selector_route_balance_weight": 50.0,
+    "customer_spatial_dispersion_weight": 15.0,
+    "customer_service_weight": 150.0,
+    "customer_age_weight": 0.0,
+    "validation_seed": 8821
+  },
+  "hardware": {
+    "neural_device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4070 SUPER",
+    "classical_device": "CPU"
+  },
+  "claim_rule": "Calibration used validation data only. The fixed test set is evaluated once without instance screening."
+}

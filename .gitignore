@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+.venv*
+*/.venv*
+experiments/.venv_classical/
+
+# Antigravity agent temp files
+.gemini/
+
+# Scratch & logs
+scratch/
+tmp/
+*.log
+wandb/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Heavy uncompressed images (use PNG/PDF for repository assets)
+*.tiff
+*.tif
+
+# OS & editor files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Golden model weights are in checkpoints/ (95 MB, fully tracked)
+# Ignore large intermediate experimental checkouts
+experiments/checkpoints/
+
+# Ignore large generated training tensors (>100MB violates GitHub file limits)
+# Generated dynamically on the fly by reproduction/instances.py
+reproduction/data/train_sample_*.pt
+
+# Ignore heavy raw per-instance logs and scratch runs in experiments/results
+experiments/results/*/raw_*.csv
+experiments/results/dvnda_detailed_*
+experiments/results/dvnda_v26_*
+experiments/results/diagnostics/
+experiments/results/vienna_realworld_classical/
+experiments/results/fast_eval/
+experiments/results/_smoke_*
+experiments/results/paper_aligned_*
+experiments/results/paper_faithful_*
+experiments/reproducibility_n20/

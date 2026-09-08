@@ -1,0 +1,4 @@
+city,nodes,directed_edges,oneway_edge_fraction,explicit_speed_edge_fraction,speed_min_kph,speed_median_kph,speed_max_kph,peak_delay_min,peak_delay_max,coordinate_normalization,osm_timestamp
+Vienna,4636,6431,0.5661638936401804,0.8312859586378479,5.0,30.0,50.0,0.15,0.45,"fixed city bounding box to [0,1]^2",2026-08-21T02:55:59Z
+London,5629,8676,0.3732134624250807,0.8296449976947903,8.04672,32.18688,40.0,0.15,0.45,"fixed city bounding box to [0,1]^2",2026-08-21T02:55:59Z
+New_York,4043,5493,0.5965774622246496,0.8867649736027672,20.0,32.18688,48.28032,0.15,0.45,"fixed city bounding box to [0,1]^2",2026-08-21T02:56:55Z

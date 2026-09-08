@@ -1,0 +1,3 @@
+method,cells,mape_percent,max_absolute_error_percent,mape_below_3_percent,max_error_below_5_percent,accepted
+OR-Tools,12,2.877878306590167,8.255640844280743,True,False,False
+Tabu Search,12,2.87514568928956,8.329905109794055,True,False,False

@@ -1,0 +1,22 @@
+{
+  "environment": "periodic_static_multivehicle_v3",
+  "environment_mode": "periodic-static-return",
+  "source_generator": "released data.py semantics",
+  "vehicle_state": "independent position, remaining capacity, available time per vehicle",
+  "intervals": 10,
+  "horizon_minutes": 480,
+  "travel_minutes_per_normalized_unit": 1.0,
+  "m_equals_n_over_5": true,
+  "terminal_dispatch": "paper-compatible closure at 480 after ten regular intervals",
+  "depot_return": "once per active interval; capacity restored at physical return",
+  "methods": [
+    "Greedy (same instances)",
+    "Regret insertion"
+  ],
+  "ortools_time_ms_per_update": 1000,
+  "alns_time_ms_per_nonempty_update": 1000,
+  "workers": 12,
+  "cpu": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+  "logical_cpus": 24,
+  "experiment_wall_time_s": 8.435049399999999
+}

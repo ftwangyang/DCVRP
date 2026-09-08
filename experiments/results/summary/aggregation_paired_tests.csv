@@ -1,0 +1,4 @@
+reference,scenario,seed_count,mean_cost_difference,paired_t_p,holm_p
+aggregation_argmax,aggregation_random,3,4.8938188600000005,0.08630511619166274,0.2589153485749882
+aggregation_argmax,aggregation_softmax,3,4.2562419288888895,0.09157931628731979,0.2589153485749882
+aggregation_argmax,vehicle_id_permuted,3,1.2777777774136072e-07,0.4228755517997691,0.4228755517997691
