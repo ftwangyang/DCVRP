@@ -43,6 +43,19 @@ def evaluate_method(
     model.include_vehicle_log_probability = False
     model = model.to(device)
 
+    # Warm-up pass to initialize CUDA context and kernel caches
+    if len(split) > 0:
+        first_dataset = next(iter(split.values()))
+        warmup_env = DCVRPEnvironment(
+            first_dataset,
+            nodes=first_dataset.nodes[:2].to(device),
+            pending_cost=0.0,
+        )
+        with torch.no_grad():
+            model(warmup_env)
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+
     rows = []
     for rate, dataset in split.items():
         if device.type == "cuda":
@@ -85,17 +98,19 @@ def evaluate_method(
 
 def print_results(rows: list[dict]):
     """Format and print evaluation metrics."""
-    print("=" * 82)
-    print(f"{'Method':<10} | {'Dynamic Rate':<12} | {'Distance (Mean +/- SD)':<24} | {'QoS (%)':<14} | {'Time (s)':<8}")
-    print("-" * 82)
+    print("=" * 86)
+    print(f"{'Method':<10} | {'Dynamic Rate':<12} | {'Distance (Mean +/- SD)':<24} | {'QoS (%)':<14} | {'Time (s)':<12}")
+    print("-" * 86)
     for r in rows:
         dist_str = f"{r['distance_mean']:.2f} +/- {r['distance_sd']:.2f}"
         if r["qos_mean"] >= 99.80:
             qos_str = f"100% ({r['qos_mean']:.2f}%)"
         else:
             qos_str = f"{r['qos_mean']:.2f}%"
-        print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {qos_str:<14} | {r['elapsed_s']:>6.3f}s")
-    print("=" * 82)
+        time_paper = f"{max(1, int(round(r['elapsed_s'])))}s"
+        time_str = f"{time_paper} ({r['elapsed_s']:.2f}s)"
+        print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {qos_str:<14} | {time_str:<12}")
+    print("=" * 86)
 
 
 def parse_args():
