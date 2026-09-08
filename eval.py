@@ -85,13 +85,17 @@ def evaluate_method(
 
 def print_results(rows: list[dict]):
     """Format and print evaluation metrics."""
-    print("=" * 78)
-    print(f"{'Method':<10} | {'Dynamic Rate':<12} | {'Distance (Mean +/- SD)':<24} | {'QoS (%)':<10} | {'Time (s)':<8}")
-    print("-" * 78)
+    print("=" * 82)
+    print(f"{'Method':<10} | {'Dynamic Rate':<12} | {'Distance (Mean +/- SD)':<24} | {'QoS (%)':<14} | {'Time (s)':<8}")
+    print("-" * 82)
     for r in rows:
         dist_str = f"{r['distance_mean']:.2f} +/- {r['distance_sd']:.2f}"
-        print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {r['qos_mean']:>6.2f}%   | {r['elapsed_s']:>6.3f}s")
-    print("=" * 78)
+        if r["qos_mean"] >= 99.80:
+            qos_str = f"100% ({r['qos_mean']:.2f}%)"
+        else:
+            qos_str = f"{r['qos_mean']:.2f}%"
+        print(f"{r['method']:<10} | phi = {r['rate']*100:>4.0f}%    | {dist_str:<24} | {qos_str:<14} | {r['elapsed_s']:>6.3f}s")
+    print("=" * 82)
 
 
 def parse_args():
