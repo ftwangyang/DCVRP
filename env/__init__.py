@@ -14,12 +14,14 @@ from .dataset import (
     set_seed,
 )
 from .environment import DCVRPEnvironment
+from .greedy import run_greedy
 
 __all__ = [
     "DCVRPEnvironment",
     "DCVRPDataset",
     "generate_dataset",
     "generate_evaluation_split",
+    "run_greedy",
     "set_seed",
     "DEFAULT_CUSTOMER_COUNT",
     "DEFAULT_VEHICLE_COUNT",

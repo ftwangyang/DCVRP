@@ -118,40 +118,51 @@ python eval.py --method DVNDA -n 35 -m 7
 python eval.py --method DVNDA -n 50 -m 10
 ```
 
-To evaluate all models across scales:
+To evaluate the event-driven **Greedy** baseline:
+
+```bash
+python eval.py --method Greedy
+```
+
+To evaluate all 6 methods (Greedy + 5 neural models) and print a side-by-side Table I comparison:
 
 ```bash
 # 20 customers, 4 vehicles
-python eval.py --method all
+python eval.py --method all --compare-table1
 
 # 35 customers, 7 vehicles
-python eval.py --method all -n 35 -m 7
+python eval.py --method all -n 35 -m 7 --compare-table1
 
 # 50 customers, 10 vehicles
-python eval.py --method all -n 50 -m 10
+python eval.py --method all -n 50 -m 10 --compare-table1
 ```
 
 Optional evaluation arguments:
+- `--method`: Algorithm to evaluate (`Greedy`, `DVNDA`, `AMCVN`, `LiDRL`, `MAAM`, `MARDAM`, or `all`).
 - `-n`, `--customer-count`: Number of customer locations (default: `20`).
 - `-m`, `--vehicle-count`: Number of vehicles (default: auto-computed as $n/5$).
 - `--instances`: Number of evaluation instances per dynamic rate (default: `100`).
 - `--seed`: Random seed for test instance generation (default: `20260821`).
 - `--rates`: Dynamic customer rates to evaluate (default: `0.10 0.25 0.50 0.75`).
 - `--device`: Target computation device (`cuda` or `cpu`).
+- `--compare-table1`: Print side-by-side verification against published Table I results.
 
 ### 3. Training From Scratch
 
-To train the DVNDA model using REINFORCE with the Rollout Baseline:
+Training hyperparameters strictly adhere to Section III-D (Algorithm 2) and Section IV-A of the manuscript:
 
 ```bash
-# Train on n=20, m=4
-python train.py --method DVNDA --epochs 100 --batch-size 100 --lr 0.0001
+# Train DVNDA on n=20, m=4 (auto: batch size 100, 1000 steps/epoch)
+python train.py --method DVNDA -n 20 -m 4 --epochs 100 --lr 0.0001
 
-# Train on n=35, m=7
-python train.py --method DVNDA -n 35 -m 7 --epochs 100 --batch-size 50 --lr 0.0001
+# Train DVNDA on n=35, m=7 (auto: batch size 50, 500 steps/epoch)
+python train.py --method DVNDA -n 35 -m 7 --epochs 100 --lr 0.0001
 
-# Train on n=50, m=10
-python train.py --method DVNDA -n 50 -m 10 --epochs 100 --batch-size 50 --lr 0.0001
+# Train DVNDA on n=50, m=10 (auto: batch size 50, 500 steps/epoch)
+python train.py --method DVNDA -n 50 -m 10 --epochs 100 --lr 0.0001
+
+# Resume training from an existing checkpoint
+python train.py --method DVNDA -n 20 -m 4 --resume checkpoints/DVNDA.pt
 ```
 
 Checkpoints will be saved automatically to `checkpoints/`.

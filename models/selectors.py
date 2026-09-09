@@ -77,7 +77,6 @@ class IndependentSelector(BaseSelector):
             )
             for _ in range(vehicle_count)
         ])
-        self.regimes: dict | None = None
 
     def scores(
         self,
@@ -86,24 +85,13 @@ class IndependentSelector(BaseSelector):
         vehicle_done: torch.Tensor,
         customer_mask: torch.Tensor,
     ) -> torch.Tensor:
-        if getattr(self, "regimes", None):
-            dyn_ratio = (customers[:, 1:, 4] > 0).float().mean().item()
-            if len(self.regimes) == 4:
-                regime_idx = 0 if dyn_ratio <= 0.18 else (1 if dyn_ratio <= 0.38 else (2 if dyn_ratio <= 0.63 else 3))
-            else:
-                regime_idx = 2 if dyn_ratio <= 0.35 else (0 if dyn_ratio <= 0.60 else 1)
-            regime_stacked = self.regimes.get(regime_idx)
-            stacked_parameters = {
-                k: v.to(vehicles.device) for k, v in regime_stacked.items()
-            }
-        else:
-            parameter_maps = [
-                dict(net.named_parameters()) for net in self.vehicle_networks
-            ]
-            stacked_parameters = {
-                name: torch.stack([pm[name] for pm in parameter_maps], dim=0)
-                for name in parameter_maps[0]
-            }
+        parameter_maps = [
+            dict(net.named_parameters()) for net in self.vehicle_networks
+        ]
+        stacked_parameters = {
+            name: torch.stack([pm[name] for pm in parameter_maps], dim=0)
+            for name in parameter_maps[0]
+        }
         own_states = vehicles.transpose(0, 1).unsqueeze(2)
         template = self.vehicle_networks[0]
 
