@@ -235,9 +235,14 @@ def train(args):
         model.load_state_dict(chk["model"])
         if "optimizer" in chk:
             optimizer.load_state_dict(chk["optimizer"])
-        start_epoch = chk.get("epoch", 0) + 1
-        best_val_dist = chk.get("val_distance", float("inf"))
-        print(f"Resumed from epoch {start_epoch - 1} (best val dist: {best_val_dist:.2f})")
+        if chk.get("customer_count") != args.customer_count:
+            print(f"Transfer learning from scale n={chk.get('customer_count')} to n={args.customer_count}")
+            start_epoch = 1
+            best_val_dist = float("inf")
+        else:
+            start_epoch = chk.get("epoch", 0) + 1
+            best_val_dist = chk.get("val_distance", float("inf"))
+        print(f"Resumed weights loaded (best val dist: {best_val_dist:.2f})")
 
     # Fixed validation dataset across dynamic rates
     val_split = generate_evaluation_split(
