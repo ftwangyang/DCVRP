@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "timestamp": "2026-09-09 15:55:02",
+    "timestamp": "2026-09-09 17:11:02",
     "device": "cuda",
     "device_name": "NVIDIA GeForce RTX 4070 SUPER",
     "seed": 20260821,
@@ -17,7 +17,7 @@
       "ci95_low": 8.949069901963874,
       "ci95_high": 9.353670195082024,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.27670930000000005,
+      "elapsed_s": 0.3392408,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -30,7 +30,7 @@
       "ci95_low": 9.652438710844498,
       "ci95_high": 10.087864328706283,
       "qos_mean": 99.75,
-      "elapsed_s": 0.3177340000000002,
+      "elapsed_s": 0.3748186000000002,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -43,7 +43,7 @@
       "ci95_low": 10.973344481871894,
       "ci95_high": 11.490211807800957,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.3924276,
+      "elapsed_s": 0.45638460000000025,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -56,7 +56,7 @@
       "ci95_low": 11.87154184415008,
       "ci95_high": 12.45743764803742,
       "qos_mean": 99.75,
-      "elapsed_s": 0.4428569000000002,
+      "elapsed_s": 0.5296460000000001,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -69,9 +69,10 @@
       "ci95_low": 8.062430876793778,
       "ci95_high": 8.501572113928878,
       "qos_mean": 99.9000015258789,
-      "elapsed_s": 0.33610019999999974,
+      "elapsed_s": 0.31578899999999965,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "DVNDA_n20_phi10.pt"
     },
     {
       "method": "DVNDA",
@@ -82,9 +83,10 @@
       "ci95_low": 8.829139474984252,
       "ci95_high": 9.237943883780396,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.3362746000000003,
+      "elapsed_s": 0.3596225000000004,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "DVNDA_n20_phi25.pt"
     },
     {
       "method": "DVNDA",
@@ -95,9 +97,10 @@
       "ci95_low": 10.141640313986912,
       "ci95_high": 10.660292974587307,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.3547683000000008,
+      "elapsed_s": 0.37013039999999986,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "DVNDA_n20_phi50.pt"
     },
     {
       "method": "DVNDA",
@@ -108,9 +111,10 @@
       "ci95_low": 11.398031067596799,
       "ci95_high": 11.94888513113367,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.31722250000000063,
+      "elapsed_s": 0.2980942000000004,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "DVNDA_n20_phi75.pt"
     },
     {
       "method": "AMCVN",
@@ -121,9 +125,10 @@
       "ci95_low": 8.376602243299144,
       "ci95_high": 8.84081452000652,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.1920175999999998,
+      "elapsed_s": 0.18948049999999927,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "AMCVN.pt"
     },
     {
       "method": "AMCVN",
@@ -134,9 +139,10 @@
       "ci95_low": 9.224200480828122,
       "ci95_high": 9.693968540778323,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.23265709999999995,
+      "elapsed_s": 0.2140702000000001,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "AMCVN.pt"
     },
     {
       "method": "AMCVN",
@@ -147,9 +153,10 @@
       "ci95_low": 10.611263126811652,
       "ci95_high": 11.123102336445184,
       "qos_mean": 99.75,
-      "elapsed_s": 0.2229524999999999,
+      "elapsed_s": 0.24070459999999994,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "AMCVN.pt"
     },
     {
       "method": "AMCVN",
@@ -160,9 +167,10 @@
       "ci95_low": 11.778734357611201,
       "ci95_high": 12.412940828546025,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.2122812999999999,
+      "elapsed_s": 0.2295619000000002,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "AMCVN.pt"
     },
     {
       "method": "LiDRL",
@@ -173,9 +181,10 @@
       "ci95_low": 8.620239416721235,
       "ci95_high": 9.142814477321734,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.22835859999999997,
+      "elapsed_s": 0.20592440000000067,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "LiDRL.pt"
     },
     {
       "method": "LiDRL",
@@ -186,9 +195,10 @@
       "ci95_low": 9.527585266415675,
       "ci95_high": 10.020140411074559,
       "qos_mean": 99.9000015258789,
-      "elapsed_s": 0.2296706000000004,
+      "elapsed_s": 0.24031879999999983,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "LiDRL.pt"
     },
     {
       "method": "LiDRL",
@@ -199,9 +209,10 @@
       "ci95_low": 10.614888230257378,
       "ci95_high": 11.167790373868598,
       "qos_mean": 99.9000015258789,
-      "elapsed_s": 0.22761980000000026,
+      "elapsed_s": 0.22685609999999912,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "LiDRL.pt"
     },
     {
       "method": "LiDRL",
@@ -212,9 +223,10 @@
       "ci95_low": 11.763999165259532,
       "ci95_high": 12.333554087914296,
       "qos_mean": 99.94999694824219,
-      "elapsed_s": 0.21193430000000024,
+      "elapsed_s": 0.23769740000000006,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "LiDRL.pt"
     },
     {
       "method": "MAAM",
@@ -225,9 +237,10 @@
       "ci95_low": 8.627042406563504,
       "ci95_high": 9.099142438407199,
       "qos_mean": 99.6500015258789,
-      "elapsed_s": 0.3194374,
+      "elapsed_s": 0.1466827999999989,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MAAM.pt"
     },
     {
       "method": "MAAM",
@@ -238,9 +251,10 @@
       "ci95_low": 9.409746501103411,
       "ci95_high": 9.913961079462995,
       "qos_mean": 99.75,
-      "elapsed_s": 0.31524669999999944,
+      "elapsed_s": 0.15107940000000042,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MAAM.pt"
     },
     {
       "method": "MAAM",
@@ -251,9 +265,10 @@
       "ci95_low": 11.049552513518268,
       "ci95_high": 11.585312293610638,
       "qos_mean": 99.75,
-      "elapsed_s": 0.3323578000000005,
+      "elapsed_s": 0.16026570000000007,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MAAM.pt"
     },
     {
       "method": "MAAM",
@@ -264,9 +279,10 @@
       "ci95_low": 11.96131880422976,
       "ci95_high": 12.516231702362036,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.31291950000000135,
+      "elapsed_s": 0.1661248000000004,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MAAM.pt"
     },
     {
       "method": "MARDAM",
@@ -277,9 +293,10 @@
       "ci95_low": 8.839983721436438,
       "ci95_high": 9.251429776488367,
       "qos_mean": 99.69999694824219,
-      "elapsed_s": 0.30269920000000106,
+      "elapsed_s": 0.13071260000000073,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MARDAM.pt"
     },
     {
       "method": "MARDAM",
@@ -290,9 +307,10 @@
       "ci95_low": 9.726883917741418,
       "ci95_high": 10.243941277571082,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.3048296000000015,
+      "elapsed_s": 0.1490354000000007,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MARDAM.pt"
     },
     {
       "method": "MARDAM",
@@ -303,9 +321,10 @@
       "ci95_low": 11.108355445535828,
       "ci95_high": 11.683552818624328,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.30469429999999953,
+      "elapsed_s": 0.15277580000000057,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MARDAM.pt"
     },
     {
       "method": "MARDAM",
@@ -316,9 +335,10 @@
       "ci95_low": 12.075423814292588,
       "ci95_high": 12.643764875892959,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.29422880000000085,
+      "elapsed_s": 0.1484766999999998,
       "customer_count": 20,
-      "vehicle_count": 4
+      "vehicle_count": 4,
+      "checkpoint": "MARDAM.pt"
     },
     {
       "method": "Greedy",
@@ -329,7 +349,7 @@
       "ci95_low": 15.324569567140092,
       "ci95_high": 15.911106244627486,
       "qos_mean": 100.0,
-      "elapsed_s": 1.6872056000000004,
+      "elapsed_s": 0.6829169000000004,
       "customer_count": 35,
       "vehicle_count": 7
     },
@@ -342,7 +362,7 @@
       "ci95_low": 16.590047761508302,
       "ci95_high": 17.26336105196826,
       "qos_mean": 100.0,
-      "elapsed_s": 1.9951568000000002,
+      "elapsed_s": 0.7802925999999992,
       "customer_count": 35,
       "vehicle_count": 7
     },
@@ -355,7 +375,7 @@
       "ci95_low": 19.126775956650132,
       "ci95_high": 19.80353715370143,
       "qos_mean": 99.97142791748047,
-      "elapsed_s": 2.5357879000000008,
+      "elapsed_s": 1.0049764999999997,
       "customer_count": 35,
       "vehicle_count": 7
     },
@@ -368,61 +388,65 @@
       "ci95_low": 21.017375028567574,
       "ci95_high": 21.82755752758477,
       "qos_mean": 100.0,
-      "elapsed_s": 3.0419382000000006,
+      "elapsed_s": 1.1778301000000013,
       "customer_count": 35,
       "vehicle_count": 7
     },
     {
       "method": "DVNDA",
       "rate": 0.1,
-      "distance_mean": 15.210897445678711,
-      "distance_sd": 1.7150039672851562,
-      "dist_sem": 0.17150039672851564,
-      "ci95_low": 14.870603451299527,
-      "ci95_high": 15.551191440057895,
+      "distance_mean": 14.840925216674805,
+      "distance_sd": 1.653871774673462,
+      "dist_sem": 0.16538717746734619,
+      "ci95_low": 14.512761175581922,
+      "ci95_high": 15.169089257767688,
       "qos_mean": 100.0,
-      "elapsed_s": 1.1508521999999992,
+      "elapsed_s": 0.5838460999999988,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "DVNDA_n35_phi10.pt"
     },
     {
       "method": "DVNDA",
       "rate": 0.25,
-      "distance_mean": 16.524723052978516,
-      "distance_sd": 1.699837565422058,
-      "dist_sem": 0.16998375654220582,
-      "ci95_low": 16.187438401766347,
-      "ci95_high": 16.862007704190685,
+      "distance_mean": 16.255475997924805,
+      "distance_sd": 1.6478599309921265,
+      "dist_sem": 0.16478599309921266,
+      "ci95_low": 15.928504837046153,
+      "ci95_high": 16.582447158803454,
       "qos_mean": 100.0,
-      "elapsed_s": 1.1412769999999988,
+      "elapsed_s": 0.5879245000000015,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "DVNDA_n35_phi25.pt"
     },
     {
       "method": "DVNDA",
       "rate": 0.5,
-      "distance_mean": 18.878355026245117,
-      "distance_sd": 1.8759713172912598,
-      "dist_sem": 0.18759713172912598,
-      "ci95_low": 18.50612161741378,
-      "ci95_high": 19.250588435076455,
+      "distance_mean": 18.7918643951416,
+      "distance_sd": 2.153041362762451,
+      "dist_sem": 0.21530413627624512,
+      "ci95_low": 18.364654278212342,
+      "ci95_high": 19.21907451207086,
       "qos_mean": 100.0,
-      "elapsed_s": 1.0706467999999987,
+      "elapsed_s": 0.5005115,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "DVNDA_n35_phi50.pt"
     },
     {
       "method": "DVNDA",
       "rate": 0.75,
-      "distance_mean": 20.478513717651367,
-      "distance_sd": 1.9748177528381348,
-      "dist_sem": 0.19748177528381347,
-      "ci95_low": 20.086667031519195,
-      "ci95_high": 20.87036040378354,
+      "distance_mean": 20.8028507232666,
+      "distance_sd": 2.1200928688049316,
+      "dist_sem": 0.21200928688049317,
+      "ci95_low": 20.38217830236106,
+      "ci95_high": 21.223523144172145,
       "qos_mean": 100.0,
-      "elapsed_s": 1.061921899999998,
+      "elapsed_s": 0.4940953999999991,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "DVNDA_n35_phi75.pt"
     },
     {
       "method": "AMCVN",
@@ -433,9 +457,10 @@
       "ci95_low": 14.41515812747783,
       "ci95_high": 15.050765181848341,
       "qos_mean": 100.0,
-      "elapsed_s": 0.7122723000000022,
+      "elapsed_s": 0.35200299999999984,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "AMCVN_n35.pt"
     },
     {
       "method": "AMCVN",
@@ -446,9 +471,10 @@
       "ci95_low": 15.8199629534323,
       "ci95_high": 16.537733579770823,
       "qos_mean": 100.0,
-      "elapsed_s": 0.7168509999999984,
+      "elapsed_s": 0.3148333999999977,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "AMCVN_n35.pt"
     },
     {
       "method": "AMCVN",
@@ -459,9 +485,10 @@
       "ci95_low": 17.97830989244973,
       "ci95_high": 18.769557691778786,
       "qos_mean": 100.0,
-      "elapsed_s": 0.7063963999999991,
+      "elapsed_s": 0.3302589999999981,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "AMCVN_n35.pt"
     },
     {
       "method": "AMCVN",
@@ -472,9 +499,10 @@
       "ci95_low": 19.70064109758388,
       "ci95_high": 20.509037552318464,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6762448999999968,
+      "elapsed_s": 0.31279039999999725,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "AMCVN_n35.pt"
     },
     {
       "method": "LiDRL",
@@ -485,9 +513,10 @@
       "ci95_low": 15.240849417550452,
       "ci95_high": 15.969780999319665,
       "qos_mean": 100.0,
-      "elapsed_s": 0.7770951000000004,
+      "elapsed_s": 0.36431590000000114,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "LiDRL_n35.pt"
     },
     {
       "method": "LiDRL",
@@ -498,9 +527,10 @@
       "ci95_low": 16.427108346850837,
       "ci95_high": 17.091930807201898,
       "qos_mean": 100.0,
-      "elapsed_s": 0.7637356000000004,
+      "elapsed_s": 0.37832639999999884,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "LiDRL_n35.pt"
     },
     {
       "method": "LiDRL",
@@ -511,9 +541,10 @@
       "ci95_low": 18.175723292436736,
       "ci95_high": 18.935883305463655,
       "qos_mean": 100.0,
-      "elapsed_s": 0.744819200000002,
+      "elapsed_s": 0.34828259999999744,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "LiDRL_n35.pt"
     },
     {
       "method": "LiDRL",
@@ -524,9 +555,10 @@
       "ci95_low": 19.88216151100255,
       "ci95_high": 20.562246905745496,
       "qos_mean": 100.0,
-      "elapsed_s": 0.7176394999999971,
+      "elapsed_s": 0.3456691999999997,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "LiDRL_n35.pt"
     },
     {
       "method": "MAAM",
@@ -537,9 +569,10 @@
       "ci95_low": 15.132428713141627,
       "ci95_high": 15.7585872933281,
       "qos_mean": 99.97142791748047,
-      "elapsed_s": 0.4875454000000019,
+      "elapsed_s": 0.21373140000000035,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MAAM_n35.pt"
     },
     {
       "method": "MAAM",
@@ -550,9 +583,10 @@
       "ci95_low": 16.752384229336766,
       "ci95_high": 17.355667070712062,
       "qos_mean": 100.0,
-      "elapsed_s": 0.47862789999999933,
+      "elapsed_s": 0.2090463999999983,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MAAM_n35.pt"
     },
     {
       "method": "MAAM",
@@ -563,9 +597,10 @@
       "ci95_low": 19.309823810244907,
       "ci95_high": 19.99614924273361,
       "qos_mean": 100.0,
-      "elapsed_s": 0.47491440000000296,
+      "elapsed_s": 0.2115279000000001,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MAAM_n35.pt"
     },
     {
       "method": "MAAM",
@@ -576,9 +611,10 @@
       "ci95_low": 21.260061375468375,
       "ci95_high": 22.00971020045936,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4772594000000012,
+      "elapsed_s": 0.21720829999999935,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MAAM_n35.pt"
     },
     {
       "method": "MARDAM",
@@ -589,9 +625,10 @@
       "ci95_low": 15.267544319380846,
       "ci95_high": 15.859240958939466,
       "qos_mean": 99.97142791748047,
-      "elapsed_s": 0.45531979999999805,
+      "elapsed_s": 0.2525802000000006,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MARDAM_n35.pt"
     },
     {
       "method": "MARDAM",
@@ -602,9 +639,10 @@
       "ci95_low": 16.916123913319787,
       "ci95_high": 17.54503483912162,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4500221999999994,
+      "elapsed_s": 0.20225459999999984,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MARDAM_n35.pt"
     },
     {
       "method": "MARDAM",
@@ -615,9 +653,10 @@
       "ci95_low": 19.501204958856835,
       "ci95_high": 20.174271115361915,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4383486999999988,
+      "elapsed_s": 0.21012269999999944,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MARDAM_n35.pt"
     },
     {
       "method": "MARDAM",
@@ -628,9 +667,10 @@
       "ci95_low": 20.89500543311578,
       "ci95_high": 21.576338561024844,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4451086999999987,
+      "elapsed_s": 0.19913100000000128,
       "customer_count": 35,
-      "vehicle_count": 7
+      "vehicle_count": 7,
+      "checkpoint": "MARDAM_n35.pt"
     },
     {
       "method": "Greedy",
@@ -641,7 +681,7 @@
       "ci95_low": 21.096531706788245,
       "ci95_high": 21.920512360594568,
       "qos_mean": 100.0,
-      "elapsed_s": 2.5511106000000012,
+      "elapsed_s": 0.963615100000002,
       "customer_count": 50,
       "vehicle_count": 10
     },
@@ -654,7 +694,7 @@
       "ci95_low": 23.12366259774945,
       "ci95_high": 23.95984875478961,
       "qos_mean": 100.0,
-      "elapsed_s": 3.121216699999998,
+      "elapsed_s": 1.2148266999999997,
       "customer_count": 50,
       "vehicle_count": 10
     },
@@ -667,7 +707,7 @@
       "ci95_low": 26.828099717372734,
       "ci95_high": 27.722544203525704,
       "qos_mean": 100.0,
-      "elapsed_s": 4.170130299999997,
+      "elapsed_s": 1.5719184999999989,
       "customer_count": 50,
       "vehicle_count": 10
     },
@@ -680,22 +720,23 @@
       "ci95_low": 30.105585335169653,
       "ci95_high": 31.092206718053003,
       "qos_mean": 99.9800033569336,
-      "elapsed_s": 5.3199697999999955,
+      "elapsed_s": 1.9393984999999994,
       "customer_count": 50,
       "vehicle_count": 10
     },
     {
       "method": "DVNDA",
       "rate": 0.1,
-      "distance_mean": 18.964378356933594,
-      "distance_sd": 2.1550495624542236,
-      "dist_sem": 0.21550495624542237,
-      "ci95_low": 18.53676976961729,
-      "ci95_high": 19.391986944249897,
+      "distance_mean": 18.891895294189453,
+      "distance_sd": 2.1677510738372803,
+      "dist_sem": 0.21677510738372802,
+      "ci95_low": 18.461766451453546,
+      "ci95_high": 19.32202413692536,
       "qos_mean": 100.0,
-      "elapsed_s": 1.6298136999999997,
+      "elapsed_s": 0.7928386999999972,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "DVNDA_n50_phi10.pt"
     },
     {
       "method": "DVNDA",
@@ -706,35 +747,38 @@
       "ci95_low": 20.708339405864095,
       "ci95_high": 21.53604154506364,
       "qos_mean": 100.0,
-      "elapsed_s": 1.6320888999999994,
+      "elapsed_s": 0.7326736999999994,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "DVNDA_n50_phi25.pt"
     },
     {
       "method": "DVNDA",
       "rate": 0.5,
-      "distance_mean": 24.380756378173828,
-      "distance_sd": 2.045248031616211,
-      "dist_sem": 0.20452480316162108,
-      "ci95_low": 23.974934796736562,
-      "ci95_high": 24.786577959611094,
+      "distance_mean": 25.485946655273438,
+      "distance_sd": 2.5797762870788574,
+      "dist_sem": 0.25797762870788576,
+      "ci95_low": 24.974063071281236,
+      "ci95_high": 25.99783023926564,
       "qos_mean": 100.0,
-      "elapsed_s": 1.550465899999999,
+      "elapsed_s": 0.82911,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "DVNDA_n50_phi50.pt"
     },
     {
       "method": "DVNDA",
       "rate": 0.75,
-      "distance_mean": 27.095657348632812,
-      "distance_sd": 2.2375340461730957,
-      "dist_sem": 0.22375340461730958,
-      "ci95_low": 26.651682050233365,
-      "ci95_high": 27.53963264703226,
+      "distance_mean": 28.829450607299805,
+      "distance_sd": 3.0283761024475098,
+      "dist_sem": 0.302837610244751,
+      "ci95_low": 28.22855508749779,
+      "ci95_high": 29.43034612710182,
       "qos_mean": 100.0,
-      "elapsed_s": 1.570993300000005,
+      "elapsed_s": 0.7813589999999948,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "DVNDA_n50_phi75.pt"
     },
     {
       "method": "AMCVN",
@@ -745,9 +789,10 @@
       "ci95_low": 20.080396830943933,
       "ci95_high": 20.94647389659513,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9585208999999963,
+      "elapsed_s": 0.4654254000000009,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "AMCVN_n50.pt"
     },
     {
       "method": "AMCVN",
@@ -758,9 +803,10 @@
       "ci95_low": 21.953361482449044,
       "ci95_high": 22.96697619455291,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9802240000000069,
+      "elapsed_s": 0.4540255000000002,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "AMCVN_n50.pt"
     },
     {
       "method": "AMCVN",
@@ -771,9 +817,10 @@
       "ci95_low": 25.283110734206225,
       "ci95_high": 26.337513808030103,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9592763999999931,
+      "elapsed_s": 0.5140849000000003,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "AMCVN_n50.pt"
     },
     {
       "method": "AMCVN",
@@ -784,9 +831,10 @@
       "ci95_low": 28.217880312216842,
       "ci95_high": 29.374336179482377,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9641170000000017,
+      "elapsed_s": 0.5145685999999969,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "AMCVN_n50.pt"
     },
     {
       "method": "LiDRL",
@@ -797,9 +845,10 @@
       "ci95_low": 20.03628320305055,
       "ci95_high": 20.815073303297105,
       "qos_mean": 100.0,
-      "elapsed_s": 1.0309554000000105,
+      "elapsed_s": 0.4942324999999954,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "LiDRL_n50.pt"
     },
     {
       "method": "LiDRL",
@@ -810,9 +859,10 @@
       "ci95_low": 22.1006807588971,
       "ci95_high": 22.932789394911495,
       "qos_mean": 100.0,
-      "elapsed_s": 1.033866400000008,
+      "elapsed_s": 0.45340860000000305,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "LiDRL_n50.pt"
     },
     {
       "method": "LiDRL",
@@ -823,9 +873,10 @@
       "ci95_low": 25.625721153740223,
       "ci95_high": 26.409957709785168,
       "qos_mean": 100.0,
-      "elapsed_s": 1.0108833999999973,
+      "elapsed_s": 0.48281519999999745,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "LiDRL_n50.pt"
     },
     {
       "method": "LiDRL",
@@ -836,9 +887,10 @@
       "ci95_low": 28.154915242152192,
       "ci95_high": 29.064673991246245,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9921019000000086,
+      "elapsed_s": 0.5594563000000008,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "LiDRL_n50.pt"
     },
     {
       "method": "MAAM",
@@ -849,9 +901,10 @@
       "ci95_low": 21.22293573783399,
       "ci95_high": 22.073828635945308,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6659034000000048,
+      "elapsed_s": 0.3532256000000018,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MAAM_n50.pt"
     },
     {
       "method": "MAAM",
@@ -862,9 +915,10 @@
       "ci95_low": 23.835545118519256,
       "ci95_high": 24.67650932484012,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6807433999999972,
+      "elapsed_s": 0.35124580000000094,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MAAM_n50.pt"
     },
     {
       "method": "MAAM",
@@ -875,9 +929,10 @@
       "ci95_low": 27.100012821399595,
       "ci95_high": 27.948826747692202,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6380132999999972,
+      "elapsed_s": 0.2651514000000006,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MAAM_n50.pt"
     },
     {
       "method": "MAAM",
@@ -888,9 +943,10 @@
       "ci95_low": 30.288474936187328,
       "ci95_high": 31.325031380951344,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6411623000000048,
+      "elapsed_s": 0.31767529999999766,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MAAM_n50.pt"
     },
     {
       "method": "MARDAM",
@@ -901,9 +957,10 @@
       "ci95_low": 21.483265548852383,
       "ci95_high": 22.160273879858554,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6075085000000087,
+      "elapsed_s": 0.30190999999999946,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MARDAM_n50.pt"
     },
     {
       "method": "MARDAM",
@@ -914,9 +971,10 @@
       "ci95_low": 23.37465946053201,
       "ci95_high": 24.115124780190648,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6199341000000089,
+      "elapsed_s": 0.30250499999999647,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MARDAM_n50.pt"
     },
     {
       "method": "MARDAM",
@@ -927,9 +985,10 @@
       "ci95_low": 27.214943415516654,
       "ci95_high": 28.034446232920846,
       "qos_mean": 100.0,
-      "elapsed_s": 0.5949446000000052,
+      "elapsed_s": 0.27824419999999606,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MARDAM_n50.pt"
     },
     {
       "method": "MARDAM",
@@ -940,9 +999,10 @@
       "ci95_low": 30.032143992564016,
       "ci95_high": 31.014921742299265,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6104158999999925,
+      "elapsed_s": 0.309858399999996,
       "customer_count": 50,
-      "vehicle_count": 10
+      "vehicle_count": 10,
+      "checkpoint": "MARDAM_n50.pt"
     }
   ]
 }

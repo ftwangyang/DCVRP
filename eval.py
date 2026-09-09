@@ -93,7 +93,7 @@ def evaluate_greedy(
 
 def evaluate_neural(
     method: str,
-    checkpoint_path: Path,
+    checkpoint_spec: Path | dict[float, Path],
     split: dict[float, object],
     device: torch.device,
     vehicle_count: int = DEFAULT_VEHICLE_COUNT,
@@ -102,20 +102,31 @@ def evaluate_neural(
     """Evaluate a trained neural model checkpoint on DCVRP test instances."""
     selector = build_selector(method, vehicle_count=vehicle_count)
     model = AttentionLearner(selector)
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    compat_state = {
-        k: v for k, v in checkpoint["model"].items()
-        if k in model.state_dict() and v.shape == model.state_dict()[k].shape
-    }
-    model.load_state_dict(compat_state, strict=False)
     model.eval()
     model.greedy = True
     model.vehicle_greedy = True
     model.include_vehicle_log_probability = False
     model = model.to(device)
 
+    # If single checkpoint, load it once
+    if isinstance(checkpoint_spec, (str, Path)):
+        checkpoint = torch.load(checkpoint_spec, map_location="cpu", weights_only=False)
+        compat_state = {
+            k: v for k, v in checkpoint["model"].items()
+            if k in model.state_dict() and v.shape == model.state_dict()[k].shape
+        }
+        model.load_state_dict(compat_state, strict=False)
+
     # Warm-up pass to initialize CUDA context and kernel caches
     if len(split) > 0 and device.type == "cuda":
+        if isinstance(checkpoint_spec, dict):
+            first_rate = next(iter(split.keys()))
+            ckpt = torch.load(checkpoint_spec[first_rate], map_location="cpu", weights_only=False)
+            compat = {
+                k: v for k, v in ckpt["model"].items()
+                if k in model.state_dict() and v.shape == model.state_dict()[k].shape
+            }
+            model.load_state_dict(compat, strict=False)
         first_dataset = next(iter(split.values()))
         warmup_env = DCVRPEnvironment(
             first_dataset,
@@ -128,6 +139,17 @@ def evaluate_neural(
 
     rows = []
     for rate, dataset in split.items():
+        if isinstance(checkpoint_spec, dict):
+            ckpt_path = checkpoint_spec[rate]
+            checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+            compat_state = {
+                k: v for k, v in checkpoint["model"].items()
+                if k in model.state_dict() and v.shape == model.state_dict()[k].shape
+            }
+            model.load_state_dict(compat_state, strict=False)
+        else:
+            ckpt_path = Path(checkpoint_spec)
+
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         start_time = time.perf_counter()
@@ -165,6 +187,7 @@ def evaluate_neural(
             "elapsed_s": elapsed,
             "customer_count": customer_count,
             "vehicle_count": vehicle_count,
+            "checkpoint": str(ckpt_path.name if isinstance(ckpt_path, Path) else ckpt_path),
         })
     return rows
 
@@ -279,6 +302,7 @@ def export_results(
         "table1_qos_percent",
         "table1_time",
         "cost_gap_percent",
+        "checkpoint",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -308,6 +332,7 @@ def export_results(
                 "table1_qos_percent": t_qos,
                 "table1_time": t_time,
                 "cost_gap_percent": round(gap, 2) if gap is not None else None,
+                "checkpoint": r.get("checkpoint", "heuristic" if method == "Greedy" else ""),
             })
     print(f"Exported raw tabular results to: {csv_path}")
 
@@ -431,6 +456,13 @@ def parse_args():
         help="Directory to save structured evaluation results (CSV, JSON, Markdown).",
     )
     parser.add_argument(
+        "--checkpoint-mode",
+        type=str,
+        choices=["auto", "specialized", "unified"],
+        default="auto",
+        help="Checkpoint mode: 'auto' uses rate-specialized if available, 'specialized' requires rate models, 'unified' uses single checkpoint per scale (default: auto).",
+    )
+    parser.add_argument(
         "--no-save",
         action="store_true",
         help="Disable saving evaluation results to disk.",
@@ -472,25 +504,52 @@ def main():
                 all_rows.extend(rows)
                 continue
 
-            checkpoint_path = args.checkpoint
-            if checkpoint_path is None:
-                scale_candidate = Path("checkpoints") / f"{method}_n{n}.pt"
-                default_path = Path("checkpoints") / f"{method}.pt"
-                if n != DEFAULT_CUSTOMER_COUNT and scale_candidate.exists():
-                    checkpoint_path = scale_candidate
-                elif default_path.exists():
-                    checkpoint_path = default_path
+            checkpoint_spec: Path | dict[float, Path] | None = None
+            if args.checkpoint is not None:
+                checkpoint_spec = args.checkpoint
+                if not checkpoint_spec.exists():
+                    print(f"Warning: Checkpoint not found at {checkpoint_spec}. Skipping {method}.")
+                    continue
+                print(f"Evaluating {method} on {device} (n={n}, m={m}, checkpoint: {checkpoint_spec})...")
+            else:
+                rate_ckpts: dict[float, Path] = {}
+                if args.checkpoint_mode in ("auto", "specialized"):
+                    for rate in split.keys():
+                        rate_pct = int(round(rate * 100))
+                        cand = Path("checkpoints") / f"{method}_n{n}_phi{rate_pct}.pt"
+                        if cand.exists():
+                            rate_ckpts[rate] = cand
+
+                if len(rate_ckpts) == len(split) and args.checkpoint_mode != "unified":
+                    checkpoint_spec = rate_ckpts
+                    print(
+                        f"Evaluating {method} on {device} (n={n}, m={m}, "
+                        f"using {len(rate_ckpts)} rate-specialized checkpoints)..."
+                    )
+                elif args.checkpoint_mode == "specialized":
+                    print(
+                        f"Warning: Specialized checkpoints incomplete for {method} (n={n}). "
+                        f"Found {len(rate_ckpts)}/{len(split)}. Skipping."
+                    )
+                    continue
                 else:
-                    checkpoint_path = scale_candidate
+                    scale_candidate = Path("checkpoints") / f"{method}_n{n}.pt"
+                    default_path = Path("checkpoints") / f"{method}.pt"
+                    if n != DEFAULT_CUSTOMER_COUNT and scale_candidate.exists():
+                        checkpoint_spec = scale_candidate
+                    elif default_path.exists():
+                        checkpoint_spec = default_path
+                    else:
+                        checkpoint_spec = scale_candidate
 
-            if not checkpoint_path.exists():
-                print(f"Warning: Checkpoint not found at {checkpoint_path}. Skipping {method}.")
-                continue
+                    if not checkpoint_spec.exists():
+                        print(f"Warning: Checkpoint not found at {checkpoint_spec}. Skipping {method}.")
+                        continue
+                    print(f"Evaluating {method} on {device} (n={n}, m={m}, checkpoint: {checkpoint_spec})...")
 
-            print(f"Evaluating {method} on {device} (n={n}, m={m}, checkpoint: {checkpoint_path})...")
             rows = evaluate_neural(
                 method,
-                checkpoint_path,
+                checkpoint_spec,
                 split,
                 device,
                 vehicle_count=m,
