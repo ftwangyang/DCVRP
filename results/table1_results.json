@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "timestamp": "2026-09-10 20:25:25",
+    "timestamp": "2026-09-10 23:29:51",
     "device": "cuda",
     "device_name": "NVIDIA GeForce RTX 4070 SUPER",
     "seed": 20260821,
@@ -17,7 +17,7 @@
       "ci95_low": 8.949069901963874,
       "ci95_high": 9.353670195082024,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.3342111000000001,
+      "elapsed_s": 0.3578235999999999,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -30,7 +30,7 @@
       "ci95_low": 9.652438710844498,
       "ci95_high": 10.087864328706283,
       "qos_mean": 99.75,
-      "elapsed_s": 0.3793875999999998,
+      "elapsed_s": 0.4076540000000002,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -43,7 +43,7 @@
       "ci95_low": 10.973344481871894,
       "ci95_high": 11.490211807800957,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.4753889,
+      "elapsed_s": 0.47879400000000016,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -56,7 +56,7 @@
       "ci95_low": 11.87154184415008,
       "ci95_high": 12.45743764803742,
       "qos_mean": 99.75,
-      "elapsed_s": 0.5456885000000002,
+      "elapsed_s": 0.5745213000000002,
       "customer_count": 20,
       "vehicle_count": 4
     },
@@ -69,7 +69,7 @@
       "ci95_low": 8.062430876793778,
       "ci95_high": 8.501572113928878,
       "qos_mean": 99.9000015258789,
-      "elapsed_s": 0.31042229999999993,
+      "elapsed_s": 0.3207203000000005,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "DVNDA.pt"
@@ -83,7 +83,7 @@
       "ci95_low": 8.829139474984252,
       "ci95_high": 9.237943883780396,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.29710520000000074,
+      "elapsed_s": 0.3297048999999994,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "DVNDA.pt"
@@ -97,7 +97,7 @@
       "ci95_low": 10.141640313986912,
       "ci95_high": 10.660292974587307,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.31425889999999956,
+      "elapsed_s": 0.3416845999999998,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "DVNDA.pt"
@@ -111,7 +111,7 @@
       "ci95_low": 11.398031067596799,
       "ci95_high": 11.94888513113367,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.29824429999999946,
+      "elapsed_s": 0.2933766000000002,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "DVNDA.pt"
@@ -125,7 +125,7 @@
       "ci95_low": 8.376602243299144,
       "ci95_high": 8.84081452000652,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.20975959999999993,
+      "elapsed_s": 0.2088998000000002,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "AMCVN.pt"
@@ -139,7 +139,7 @@
       "ci95_low": 9.224200480828122,
       "ci95_high": 9.693968540778323,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.1917460000000002,
+      "elapsed_s": 0.24121330000000007,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "AMCVN.pt"
@@ -153,7 +153,7 @@
       "ci95_low": 10.611263126811652,
       "ci95_high": 11.123102336445184,
       "qos_mean": 99.75,
-      "elapsed_s": 0.2280376000000004,
+      "elapsed_s": 0.19467820000000025,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "AMCVN.pt"
@@ -167,7 +167,7 @@
       "ci95_low": 11.778734357611201,
       "ci95_high": 12.412940828546025,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.17815640000000066,
+      "elapsed_s": 0.20622129999999927,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "AMCVN.pt"
@@ -181,7 +181,7 @@
       "ci95_low": 8.620239416721235,
       "ci95_high": 9.142814477321734,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.20773110000000017,
+      "elapsed_s": 0.21358389999999972,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "LiDRL.pt"
@@ -195,7 +195,7 @@
       "ci95_low": 9.527585266415675,
       "ci95_high": 10.020140411074559,
       "qos_mean": 99.9000015258789,
-      "elapsed_s": 0.20883440000000064,
+      "elapsed_s": 0.2309538,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "LiDRL.pt"
@@ -209,7 +209,7 @@
       "ci95_low": 10.614888230257378,
       "ci95_high": 11.167790373868598,
       "qos_mean": 99.9000015258789,
-      "elapsed_s": 0.22373399999999943,
+      "elapsed_s": 0.26869679999999985,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "LiDRL.pt"
@@ -223,7 +223,7 @@
       "ci95_low": 11.763999165259532,
       "ci95_high": 12.333554087914296,
       "qos_mean": 99.94999694824219,
-      "elapsed_s": 0.21734840000000055,
+      "elapsed_s": 0.19605789999999956,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "LiDRL.pt"
@@ -237,7 +237,7 @@
       "ci95_low": 8.627042406563504,
       "ci95_high": 9.099142438407199,
       "qos_mean": 99.6500015258789,
-      "elapsed_s": 0.28524170000000026,
+      "elapsed_s": 0.14068660000000044,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MAAM.pt"
@@ -251,7 +251,7 @@
       "ci95_low": 9.409746501103411,
       "ci95_high": 9.913961079462995,
       "qos_mean": 99.75,
-      "elapsed_s": 0.28894429999999893,
+      "elapsed_s": 0.1276843999999997,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MAAM.pt"
@@ -265,7 +265,7 @@
       "ci95_low": 11.049552513518268,
       "ci95_high": 11.585312293610638,
       "qos_mean": 99.75,
-      "elapsed_s": 0.29560170000000063,
+      "elapsed_s": 0.1362261999999994,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MAAM.pt"
@@ -279,7 +279,7 @@
       "ci95_low": 11.96131880422976,
       "ci95_high": 12.516231702362036,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.2821695000000002,
+      "elapsed_s": 0.1394725000000001,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MAAM.pt"
@@ -293,7 +293,7 @@
       "ci95_low": 8.839983721436438,
       "ci95_high": 9.251429776488367,
       "qos_mean": 99.69999694824219,
-      "elapsed_s": 0.2701066000000001,
+      "elapsed_s": 0.13501559999999913,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MARDAM.pt"
@@ -307,7 +307,7 @@
       "ci95_low": 9.726883917741418,
       "ci95_high": 10.243941277571082,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.27701649999999844,
+      "elapsed_s": 0.14217099999999938,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MARDAM.pt"
@@ -321,7 +321,7 @@
       "ci95_low": 11.108355445535828,
       "ci95_high": 11.683552818624328,
       "qos_mean": 99.8499984741211,
-      "elapsed_s": 0.2756294999999991,
+      "elapsed_s": 0.13441949999999991,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MARDAM.pt"
@@ -335,7 +335,7 @@
       "ci95_low": 12.075423814292588,
       "ci95_high": 12.643764875892959,
       "qos_mean": 99.80000305175781,
-      "elapsed_s": 0.27137609999999945,
+      "elapsed_s": 0.12375489999999978,
       "customer_count": 20,
       "vehicle_count": 4,
       "checkpoint": "MARDAM.pt"
@@ -349,7 +349,7 @@
       "ci95_low": 15.324569567140092,
       "ci95_high": 15.911106244627486,
       "qos_mean": 100.0,
-      "elapsed_s": 1.5780501000000005,
+      "elapsed_s": 0.7092492000000004,
       "customer_count": 35,
       "vehicle_count": 7
     },
@@ -362,7 +362,7 @@
       "ci95_low": 16.590047761508302,
       "ci95_high": 17.26336105196826,
       "qos_mean": 100.0,
-      "elapsed_s": 1.8756925000000013,
+      "elapsed_s": 0.8390823000000012,
       "customer_count": 35,
       "vehicle_count": 7
     },
@@ -375,7 +375,7 @@
       "ci95_low": 19.126775956650132,
       "ci95_high": 19.80353715370143,
       "qos_mean": 99.97142791748047,
-      "elapsed_s": 2.401666200000001,
+      "elapsed_s": 1.0238779999999998,
       "customer_count": 35,
       "vehicle_count": 7
     },
@@ -388,20 +388,20 @@
       "ci95_low": 21.017375028567574,
       "ci95_high": 21.82755752758477,
       "qos_mean": 100.0,
-      "elapsed_s": 2.8884136999999974,
+      "elapsed_s": 1.2539941,
       "customer_count": 35,
       "vehicle_count": 7
     },
     {
       "method": "DVNDA",
       "rate": 0.1,
-      "distance_mean": 15.157919883728027,
-      "distance_sd": 1.6689897775650024,
-      "dist_sem": 0.16689897775650026,
-      "ci95_low": 14.826756102874109,
-      "ci95_high": 15.489083664581946,
+      "distance_mean": 14.989483833312988,
+      "distance_sd": 1.4842396974563599,
+      "dist_sem": 0.148423969745636,
+      "ci95_low": 14.694978476533485,
+      "ci95_high": 15.283989190092491,
       "qos_mean": 100.0,
-      "elapsed_s": 1.0294974000000003,
+      "elapsed_s": 0.5693406999999997,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "DVNDA_n35.pt"
@@ -409,13 +409,13 @@
     {
       "method": "DVNDA",
       "rate": 0.25,
-      "distance_mean": 16.371305465698242,
-      "distance_sd": 1.7363158464431763,
-      "dist_sem": 0.17363158464431763,
-      "ci95_low": 16.02678273212967,
-      "ci95_high": 16.715828199266813,
+      "distance_mean": 16.293581008911133,
+      "distance_sd": 1.708595871925354,
+      "dist_sem": 0.1708595871925354,
+      "ci95_low": 15.954558519675928,
+      "ci95_high": 16.632603498146338,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9893127000000028,
+      "elapsed_s": 0.5758109000000005,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "DVNDA_n35.pt"
@@ -423,13 +423,13 @@
     {
       "method": "DVNDA",
       "rate": 0.5,
-      "distance_mean": 18.949562072753906,
-      "distance_sd": 1.880311369895935,
-      "dist_sem": 0.1880311369895935,
-      "ci95_low": 18.576467503327702,
-      "ci95_high": 19.32265664218011,
+      "distance_mean": 18.793481826782227,
+      "distance_sd": 1.9192148447036743,
+      "dist_sem": 0.19192148447036744,
+      "ci95_low": 18.412667963937412,
+      "ci95_high": 19.17429568962704,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9776782999999973,
+      "elapsed_s": 0.4975024000000001,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "DVNDA_n35.pt"
@@ -437,13 +437,13 @@
     {
       "method": "DVNDA",
       "rate": 0.75,
-      "distance_mean": 20.785022735595703,
-      "distance_sd": 2.110421657562256,
-      "dist_sem": 0.21104216575622559,
-      "ci95_low": 20.366269292819094,
-      "ci95_high": 21.203776178372312,
+      "distance_mean": 20.66787338256836,
+      "distance_sd": 2.1167197227478027,
+      "dist_sem": 0.21167197227478027,
+      "ci95_low": 20.247870267021465,
+      "ci95_high": 21.087876498115254,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9666128999999977,
+      "elapsed_s": 0.49086809999999836,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "DVNDA_n35.pt"
@@ -457,7 +457,7 @@
       "ci95_low": 14.711563768103941,
       "ci95_high": 15.408026991173402,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6403836999999974,
+      "elapsed_s": 0.31678299999999737,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "AMCVN_n35.pt"
@@ -471,7 +471,7 @@
       "ci95_low": 16.20293817477776,
       "ci95_high": 16.894721889919506,
       "qos_mean": 100.0,
-      "elapsed_s": 0.648266600000003,
+      "elapsed_s": 0.3178670999999973,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "AMCVN_n35.pt"
@@ -485,7 +485,7 @@
       "ci95_low": 18.529164309458913,
       "ci95_high": 19.340571408314524,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6341701999999998,
+      "elapsed_s": 0.3197700999999995,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "AMCVN_n35.pt"
@@ -499,7 +499,7 @@
       "ci95_low": 20.643967179746216,
       "ci95_high": 21.393619032411987,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6271108000000005,
+      "elapsed_s": 0.3124797000000008,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "AMCVN_n35.pt"
@@ -513,7 +513,7 @@
       "ci95_low": 14.982776644529206,
       "ci95_high": 15.724994656740325,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6959441999999996,
+      "elapsed_s": 0.3519281999999997,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "LiDRL_n35.pt"
@@ -527,7 +527,7 @@
       "ci95_low": 16.523328558932185,
       "ci95_high": 17.22350905703461,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6947157999999973,
+      "elapsed_s": 0.33543750000000117,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "LiDRL_n35.pt"
@@ -541,7 +541,7 @@
       "ci95_low": 18.77004196902203,
       "ci95_high": 19.524567100802187,
       "qos_mean": 100.0,
-      "elapsed_s": 0.688809899999999,
+      "elapsed_s": 0.3552974000000013,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "LiDRL_n35.pt"
@@ -555,7 +555,7 @@
       "ci95_low": 20.498011020338982,
       "ci95_high": 21.244107815110237,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6466852999999979,
+      "elapsed_s": 0.3424598000000003,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "LiDRL_n35.pt"
@@ -569,7 +569,7 @@
       "ci95_low": 15.089026330432002,
       "ci95_high": 15.707440496960576,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4488030000000016,
+      "elapsed_s": 0.2210365000000003,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MAAM_n35.pt"
@@ -583,7 +583,7 @@
       "ci95_low": 16.68211990116307,
       "ci95_high": 17.28553146602443,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4477155000000046,
+      "elapsed_s": 0.20526849999999897,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MAAM_n35.pt"
@@ -597,7 +597,7 @@
       "ci95_low": 19.47053959092162,
       "ci95_high": 20.172843435201425,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4392752999999985,
+      "elapsed_s": 0.22116069999999866,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MAAM_n35.pt"
@@ -611,7 +611,7 @@
       "ci95_low": 21.225730411826767,
       "ci95_high": 21.905582912147842,
       "qos_mean": 100.0,
-      "elapsed_s": 0.43308640000000054,
+      "elapsed_s": 0.20897829999999828,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MAAM_n35.pt"
@@ -625,7 +625,7 @@
       "ci95_low": 15.451185932763023,
       "ci95_high": 16.059329280249674,
       "qos_mean": 100.0,
-      "elapsed_s": 0.41520009999999985,
+      "elapsed_s": 0.22109790000000018,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MARDAM_n35.pt"
@@ -639,7 +639,7 @@
       "ci95_low": 16.813167691413867,
       "ci95_high": 17.359645724113477,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4166669999999968,
+      "elapsed_s": 0.208811800000003,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MARDAM_n35.pt"
@@ -653,7 +653,7 @@
       "ci95_low": 19.441864972087803,
       "ci95_high": 20.141425128009853,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4055119000000005,
+      "elapsed_s": 0.20643619999999885,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MARDAM_n35.pt"
@@ -667,7 +667,7 @@
       "ci95_low": 21.185456931920108,
       "ci95_high": 21.939630806117002,
       "qos_mean": 100.0,
-      "elapsed_s": 0.4080025999999961,
+      "elapsed_s": 0.2360131999999986,
       "customer_count": 35,
       "vehicle_count": 7,
       "checkpoint": "MARDAM_n35.pt"
@@ -681,7 +681,7 @@
       "ci95_low": 21.096531706788245,
       "ci95_high": 21.920512360594568,
       "qos_mean": 100.0,
-      "elapsed_s": 2.3822079999999985,
+      "elapsed_s": 1.0049992000000003,
       "customer_count": 50,
       "vehicle_count": 10
     },
@@ -694,7 +694,7 @@
       "ci95_low": 23.12366259774945,
       "ci95_high": 23.95984875478961,
       "qos_mean": 100.0,
-      "elapsed_s": 2.9097956000000025,
+      "elapsed_s": 1.2205604,
       "customer_count": 50,
       "vehicle_count": 10
     },
@@ -707,7 +707,7 @@
       "ci95_low": 26.828099717372734,
       "ci95_high": 27.722544203525704,
       "qos_mean": 100.0,
-      "elapsed_s": 3.923899200000001,
+      "elapsed_s": 1.619471400000002,
       "customer_count": 50,
       "vehicle_count": 10
     },
@@ -720,7 +720,7 @@
       "ci95_low": 30.105585335169653,
       "ci95_high": 31.092206718053003,
       "qos_mean": 99.9800033569336,
-      "elapsed_s": 4.975513300000003,
+      "elapsed_s": 2.051508499999997,
       "customer_count": 50,
       "vehicle_count": 10
     },
@@ -733,7 +733,7 @@
       "ci95_low": 18.778120495622478,
       "ci95_high": 19.620671771223225,
       "qos_mean": 100.0,
-      "elapsed_s": 1.4288093999999987,
+      "elapsed_s": 0.7465767000000021,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "DVNDA_n50.pt"
@@ -747,7 +747,7 @@
       "ci95_low": 21.159647208175613,
       "ci95_high": 22.07230164436345,
       "qos_mean": 100.0,
-      "elapsed_s": 1.445662200000001,
+      "elapsed_s": 0.8311278999999985,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "DVNDA_n50.pt"
@@ -761,7 +761,7 @@
       "ci95_low": 24.555013852989344,
       "ci95_high": 25.538999361121984,
       "qos_mean": 100.0,
-      "elapsed_s": 1.4116377,
+      "elapsed_s": 0.8173914999999994,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "DVNDA_n50.pt"
@@ -775,7 +775,7 @@
       "ci95_low": 27.834748178899705,
       "ci95_high": 28.997843831598342,
       "qos_mean": 100.0,
-      "elapsed_s": 1.3820910000000026,
+      "elapsed_s": 0.7808958999999973,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "DVNDA_n50.pt"
@@ -789,7 +789,7 @@
       "ci95_low": 19.49757647146569,
       "ci95_high": 20.45391202340736,
       "qos_mean": 100.0,
-      "elapsed_s": 0.8772979000000021,
+      "elapsed_s": 0.47671379999999886,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "AMCVN_n50.pt"
@@ -803,7 +803,7 @@
       "ci95_low": 21.687770783539566,
       "ci95_high": 22.692745268706528,
       "qos_mean": 100.0,
-      "elapsed_s": 0.8964623000000032,
+      "elapsed_s": 0.5279579999999982,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "AMCVN_n50.pt"
@@ -817,7 +817,7 @@
       "ci95_low": 25.208364677444088,
       "ci95_high": 26.324556159958256,
       "qos_mean": 100.0,
-      "elapsed_s": 0.8731561999999968,
+      "elapsed_s": 0.46549389999999846,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "AMCVN_n50.pt"
@@ -831,7 +831,7 @@
       "ci95_low": 28.251630449800675,
       "ci95_high": 29.41464075991612,
       "qos_mean": 100.0,
-      "elapsed_s": 0.870373899999997,
+      "elapsed_s": 0.43668430000000313,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "AMCVN_n50.pt"
@@ -845,7 +845,7 @@
       "ci95_low": 19.587409333628333,
       "ci95_high": 20.47981326158651,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9768438999999987,
+      "elapsed_s": 0.4933466000000024,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "LiDRL_n50.pt"
@@ -859,7 +859,7 @@
       "ci95_low": 21.766903608836362,
       "ci95_high": 22.536479264698794,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9528347000000039,
+      "elapsed_s": 0.49386880000000133,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "LiDRL_n50.pt"
@@ -873,7 +873,7 @@
       "ci95_low": 25.16873844022667,
       "ci95_high": 25.995068475056534,
       "qos_mean": 100.0,
-      "elapsed_s": 0.9270444999999938,
+      "elapsed_s": 0.46608499999999964,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "LiDRL_n50.pt"
@@ -887,7 +887,7 @@
       "ci95_low": 28.30868309607554,
       "ci95_high": 29.232153238152975,
       "qos_mean": 100.0,
-      "elapsed_s": 0.8983915000000025,
+      "elapsed_s": 0.46309610000000134,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "LiDRL_n50.pt"
@@ -901,7 +901,7 @@
       "ci95_low": 20.13456259097878,
       "ci95_high": 20.90960778865989,
       "qos_mean": 100.0,
-      "elapsed_s": 0.6059958000000023,
+      "elapsed_s": 0.28525820000000124,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MAAM_n50.pt"
@@ -915,7 +915,7 @@
       "ci95_low": 22.353760847221302,
       "ci95_high": 23.152552476753307,
       "qos_mean": 99.9800033569336,
-      "elapsed_s": 0.607568900000004,
+      "elapsed_s": 0.36245240000000223,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MAAM_n50.pt"
@@ -929,7 +929,7 @@
       "ci95_low": 26.333927770859432,
       "ci95_high": 27.173941949599552,
       "qos_mean": 100.0,
-      "elapsed_s": 0.5926274999999919,
+      "elapsed_s": 0.282023499999994,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MAAM_n50.pt"
@@ -943,7 +943,7 @@
       "ci95_low": 29.16249694824851,
       "ci95_high": 30.162438964837428,
       "qos_mean": 100.0,
-      "elapsed_s": 0.5955045000000041,
+      "elapsed_s": 0.287646500000001,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MAAM_n50.pt"
@@ -957,7 +957,7 @@
       "ci95_low": 21.34700542746727,
       "ci95_high": 22.019915043724136,
       "qos_mean": 100.0,
-      "elapsed_s": 0.5627867000000037,
+      "elapsed_s": 0.2762196999999986,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MARDAM_n50.pt"
@@ -971,7 +971,7 @@
       "ci95_low": 23.045647317795353,
       "ci95_high": 23.784797018142147,
       "qos_mean": 100.0,
-      "elapsed_s": 0.5646472000000102,
+      "elapsed_s": 0.2794146000000026,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MARDAM_n50.pt"
@@ -985,7 +985,7 @@
       "ci95_low": 26.916228100415122,
       "ci95_high": 27.81376762712394,
       "qos_mean": 100.0,
-      "elapsed_s": 0.5500329999999991,
+      "elapsed_s": 0.26564100000000224,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MARDAM_n50.pt"
@@ -999,7 +999,7 @@
       "ci95_low": 29.235343269992843,
       "ci95_high": 30.179367728542314,
       "qos_mean": 100.0,
-      "elapsed_s": 0.5563542000000012,
+      "elapsed_s": 0.26946470000000033,
       "customer_count": 50,
       "vehicle_count": 10,
       "checkpoint": "MARDAM_n50.pt"
