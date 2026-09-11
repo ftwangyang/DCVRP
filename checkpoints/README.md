@@ -51,7 +51,7 @@ python eval.py --method all -n all --compare-table1 --save-dir results
 
 | Method | Vehicle Selector Type | Shared Parameters | Selector Parameters | Total Trainable Parameters |
 |:-------|:----------------------|:-----------------:|:-------------------:|:--------------------------:|
-| **DVNDA** (Ours) | Independent Dual-Attention Sub-Networks | 561,029 | 143,109 | **704,138** |
+| **DVNDA** (Ours) | Distributed Vehicle Networks with Decision Aggregation | 561,029 | 143,109 | **704,138** |
 | **AMCVN** | Centralized Multi-Head Fleet Attention | 561,029 | 64,133 | **625,162** |
 | **LiDRL** | Tour History Recurrent Network | 561,029 | 114,949 | **675,978** |
 | **MAAM** | Round-Robin Dispatch Rule | 561,029 | 0 | **561,029** |

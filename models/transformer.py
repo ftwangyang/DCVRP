@@ -184,7 +184,7 @@ class TransformerEncoder(nn.Module):
 
 
 class VehicleSelectionNetwork(nn.Module):
-    """Dual-attention sub-network for vehicle selection (DVNDA).
+    """Distributed vehicle sub-network for vehicle selection (DVNDA).
 
     Applies fleet attention across vehicle states and customer attention
     across customer features, followed by a 2-layer MLP decision head.

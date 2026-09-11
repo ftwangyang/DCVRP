@@ -1,6 +1,6 @@
 """Vehicle selection policies for DCVRP.
 
-Includes the proposed DVNDA independent dual-attention selector along with
+Includes the proposed DVNDA distributed vehicle networks with decision aggregation along with
 baseline vehicle dispatching and selection strategies.
 """
 
@@ -54,11 +54,11 @@ class BaseSelector(nn.Module):
 
 
 class IndependentSelector(BaseSelector):
-    """DVNDA: Independent Dual-Attention Sub-Networks for Vehicle Selection.
+    """DVNDA: Distributed Vehicle Networks with Decision Aggregation.
 
-    Each vehicle possesses a dedicated dual-attention sub-network (fleet
-    attention across vehicles and customer attention across demand points).
-    Evaluated efficiently via batched functional calls (vmap).
+    Each vehicle possesses a dedicated neural sub-network to make parallel decisions
+    based on the shared status of vehicles and customers, which are synthesized
+    via decision aggregation. Evaluated efficiently via batched functional calls (vmap).
     """
 
     def __init__(

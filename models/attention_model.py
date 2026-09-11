@@ -2,7 +2,7 @@
 
 Combines a 3-layer Transformer encoder for dynamic customer embeddings,
 pointer attention decoder for customer selection with tanh clipping (C=10),
-and a modular vehicle selector (DVNDA Independent Dual-Attention by default).
+and a modular vehicle selector (DVNDA Distributed Vehicle Networks with Decision Aggregation by default).
 """
 
 from __future__ import annotations

@@ -3,7 +3,7 @@
 Evaluates trained deep reinforcement learning models and the Greedy baseline
 on DCVRP instances across various degrees of dynamism (phi in {0.10, 0.25, 0.50, 0.75}).
 Strictly conforms to Section IV-A and Table I of the manuscript:
-"DVNDA: Deep Reinforcement Learning with Dual-Attention for Dynamic Capacitated Vehicle Routing Problem"
+"Distributed Vehicle Network with Decision Aggregation for Dynamic Capacitated Vehicle Routing Problem (DVNDA)"
 """
 
 from __future__ import annotations

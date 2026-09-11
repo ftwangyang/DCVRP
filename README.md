@@ -1,19 +1,19 @@
-# DVNDA: Deep Reinforcement Learning with Dual-Attention for Dynamic Capacitated Vehicle Routing Problem
+# Distributed Vehicle Network with Decision Aggregation for Dynamic Capacitated Vehicle Routing Problem (DVNDA)
 
-Official implementation of the **Dual-Attention Vehicle Selection Network (DVNDA)** for the **Dynamic Capacitated Vehicle Routing Problem (DCVRP)**.
+Official PyTorch implementation of **Distributed Vehicle Network with Decision Aggregation (DVNDA)** for the **Dynamic Capacitated Vehicle Routing Problem (DCVRP)**.
+
+*Yang Wang, Ya-Hui Jia, Member, IEEE, Qiang Yang, Member, IEEE, Feng-Feng Wei, Member, IEEE, Zhenhong Lin, Senior Member, IEEE, Wei-Neng Chen, Senior Member, IEEE*
 
 ---
 
 ## 📌 Overview
 
-The **Dynamic Capacitated Vehicle Routing Problem (DCVRP)** extends classical VRP by incorporating real-world operational dynamics:
+The **Dynamic Capacitated Vehicle Routing Problem (DCVRP)** is a key challenge in logistics and delivery, where customer requests arrive dynamically in real-time over an operational horizon, and multiple vehicles with capacity constraints must collaborate to complete delivery tasks under a time-driven synchronized environment:
 - Customer requests are revealed dynamically over an operational horizon according to a stochastic Poisson disclosure process.
 - Operations are synchronized across discrete time intervals ($\beta = 10$).
-- Real-time vehicle dispatching and customer sequencing decisions are updated dynamically.
+- At each interval boundary, unstarted provisional legs are released and refunded for dynamic replanning (Eqs. 11–14).
 
-**DVNDA** decouples the multi-vehicle dynamic routing decision into two collaborative attention-based stages:
-1. **Vehicle Selection**: Dedicated dual-attention sub-networks for each vehicle that attend to both current fleet states and active spatial-temporal customer demands.
-2. **Customer Sequencing**: An attention pointer network with $C=10$ tanh exploration that decodes feasible destinations for the selected vehicle.
+Unlike existing methods that rely on expert-knowledge rules (MARDAM, MAAM) or centralized networks (AMCVN) for vehicle allocation, **DVNDA** equips each vehicle with an independent neural network to make parallel decisions based on the shared status of all vehicles and customers. In each step, DVNDA synthesizes all vehicles' decisions through lightweight decision aggregation and selects one vehicle to serve the customer, achieving efficient multi-vehicle collaboration.
 
 ---
 
@@ -80,7 +80,7 @@ All neural methods share an identical 561,029-parameter Transformer encoder and 
 
 | Method | Vehicle Selector Architecture | Shared Parameters | Selector Parameters | Total Parameters |
 |:-------|:------------------------------|:-----------------:|:-------------------:|:----------------:|
-| **DVNDA** (Ours) | Independent Dual-Attention Sub-Networks | 561,029 | 143,109 | **704,138** |
+| **DVNDA** (Ours) | Distributed Vehicle Networks with Decision Aggregation | 561,029 | 143,109 | **704,138** |
 | **AMCVN** | Centralized Multi-Head Fleet Attention | 561,029 | 64,133 | **625,162** |
 | **LiDRL** | Tour History Recurrent Network | 561,029 | 114,949 | **675,978** |
 | **MAAM** | Round-Robin Dispatch Rule | 561,029 | 0 | **561,029** |
@@ -277,7 +277,7 @@ All results below are evaluated with **genuine PyTorch execution and real enviro
 | Algorithm | Selector Paradigm | Scale $n=20$ MAPE | Scale $n=35$ MAPE | Scale $n=50$ MAPE | **Overall 12-Cell MAPE** |
 |:---|:---|:---:|:---:|:---:|:---:|
 | **Greedy** | Nearest-Feasible Insertion | 1.27% | **0.51%** | **0.76%** | **0.85%** |
-| **DVNDA** (Ours) | Dual-Attention Sub-Networks | **0.71%** | **0.66%** | **1.65%** | **1.01%** |
+| **DVNDA** (Ours) | Distributed Vehicle Networks with Decision Aggregation | **0.71%** | **0.66%** | **1.65%** | **1.01%** |
 | **MAAM** | Round-Robin Dispatch Rule | 1.09% | 0.79% | 1.90% | **1.26%** |
 | **MARDAM** | Earliest-Available Rule | 1.72% | 0.76% | 2.38% | **1.62%** |
 | **AMCVN** | Centralized Fleet Attention | 1.68% | **0.58%** | **2.00%** | **1.42%** |
@@ -291,6 +291,21 @@ All results below are evaluated with **genuine PyTorch execution and real enviro
 > - The global 72-cell MAPE of **1.35%** strictly conforms to the theoretical 95% confidence interval ($\approx \pm 2.4\%$) under $N=100$ independent stochastic evaluation instances. Full CSV and JSON benchmark results are persisted in [`results/`](results/).
 
 > **Experimental Authenticity Guarantee**: All benchmarks are conducted via genuine forward simulation through the mathematical environment (`DCVRPEnvironment`) without any runtime heuristics, calibration multipliers, or data fabrication. All evaluation checkpoints are standard PyTorch `.pt` files. Full reproducible CSV, JSON, and Markdown logs are automatically generated in `results/`.
+
+---
+
+## 📚 Citation
+
+If you find this work or codebase helpful in your research, please cite the paper:
+
+```bibtex
+@article{wang2026distributed,
+  title={Distributed Vehicle Network with Decision Aggregation for Dynamic Capacitated Vehicle Routing Problem},
+  author={Wang, Yang and Jia, Ya-Hui and Yang, Qiang and Wei, Feng-Feng and Lin, Zhenhong and Chen, Wei-Neng},
+  journal={IEEE Transactions},
+  year={2026}
+}
+```
 
 ---
 
