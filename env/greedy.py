@@ -41,11 +41,8 @@ def run_greedy(
     intervals: int = 10,
     horizon: float = 1.0,
     pending_cost: float = 0.0,
-    alpha_depot: float | None = None,
-    beta_cap: float | None = None,
-    max_depot_batch: int | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Execute the event-driven nearest-task Greedy baseline.
+    """Execute the event-driven nearest-task Greedy baseline strictly conforming to Section IV-A.
 
     Parameters
     ----------
@@ -60,16 +57,6 @@ def run_greedy(
         Normalized operational time horizon (default: 1.0).
     pending_cost : float, optional
         Penalty for each unserved customer (default: 0.0 during evaluation).
-    alpha_depot : float, optional
-        Directional depot regularization coefficient. If None, set adaptively
-        based on fleet scale (0.32 for n=35, m=7; 0.03 for n=50, m=10; 0.0 otherwise).
-    beta_cap : float, optional
-        Capacity fit regularization coefficient. If None, set adaptively
-        based on fleet scale (0.02 for n=50, m=10; 0.0 otherwise).
-    max_depot_batch : int, optional
-        Maximum number of vehicles departing depot per dynamic event time.
-        If None, set adaptively based on fleet scale (1 for large fleets m >= 10,
-        unlimited otherwise).
 
     Returns
     -------
@@ -81,26 +68,6 @@ def run_greedy(
     vehicle_count = int(data.veh_count)
     capacity = float(data.veh_capa)
     speed = float(data.veh_speed)
-
-    # Adaptive fleet dispatch parameters
-    depot_reg = (
-        (0.32 if vehicle_count == 7 else (0.03 if vehicle_count >= 10 else 0.0))
-        if alpha_depot is None
-        else float(alpha_depot)
-    )
-    cap_reg = (
-        (0.02 if vehicle_count >= 10 else 0.0)
-        if beta_cap is None
-        else float(beta_cap)
-    )
-    depot_batch = (
-        (1 if vehicle_count >= 10 else None)
-        if max_depot_batch is None
-        else max_depot_batch
-    )
-    init_depot_count = (
-        3 if vehicle_count >= 10 else vehicle_count
-    )
 
     costs: list[float] = []
     served: list[float] = []
@@ -129,37 +96,37 @@ def run_greedy(
                 (idle_at <= now + 1e-7).nonzero(as_tuple=False).flatten().tolist()
             )
             if len(idle_vehicles) > 0 and bool(visible.any()):
-                # Active vehicles in the field have priority over vehicles still at depot
                 act = [v for v in idle_vehicles if bool(has_departed[v])]
                 dpt = [v for v in idle_vehicles if not bool(has_departed[v])]
-
-                if now < 1e-6:
-                    allowed_dpt = dpt[:init_depot_count]
-                else:
-                    allowed_dpt = (
-                        dpt[:depot_batch] if depot_batch is not None else dpt
-                    )
-
-                v_order = act + allowed_dpt
+                v_order = act + dpt
 
                 for vehicle in v_order:
-                    feasible = visible & (nodes[:, 2] <= remaining[vehicle] + 1e-7)
-                    candidates = feasible.nonzero(as_tuple=False).flatten()
+                    feas_cap = visible & (nodes[:, 2] <= remaining[vehicle] + 1e-7)
+                    candidates = feas_cap.nonzero(as_tuple=False).flatten()
                     if candidates.numel() == 0:
                         continue
+
                     distances = torch.norm(
                         nodes[candidates, :2] - positions[vehicle], dim=1
                     )
-                    score = distances
-                    if depot_reg > 0:
-                        score = score + depot_reg * depot_dists[candidates]
-                    if cap_reg > 0:
-                        score = score + cap_reg * (remaining[vehicle] - nodes[candidates, 2]) / capacity
+                    # Time feasibility check (Eq. 8): must complete service and return to depot before horizon T
+                    travel_times = distances / speed
+                    start_times = torch.maximum(now + travel_times, nodes[candidates, 4])
+                    finish_times = start_times + nodes[candidates, 3]
+                    dist_to_depot = torch.norm(nodes[candidates, :2] - depot, dim=1)
+                    return_times = finish_times + dist_to_depot / speed
+                    time_feasible = return_times <= (horizon + 1e-6)
 
-                    customer = int(candidates[score.argmin()].item())
-                    leg = float(
-                        torch.norm(nodes[customer, :2] - positions[vehicle]).item()
-                    )
+                    feas_candidates = candidates[time_feasible]
+                    if feas_candidates.numel() == 0:
+                        continue
+                    feas_distances = distances[time_feasible]
+
+                    # Pure nearest available task (Section IV-A)
+                    best_idx = feas_distances.argmin()
+                    customer = int(feas_candidates[best_idx].item())
+                    leg = float(feas_distances[best_idx].item())
+
                     cost += leg
                     idle_at[vehicle] = (
                         now + leg / speed + float(nodes[customer, 3])

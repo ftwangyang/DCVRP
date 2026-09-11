@@ -51,7 +51,6 @@ class DCVRPEnvironment:
         self._event_distance: list[torch.Tensor] = []
         self._event_vehicle_state: list[torch.Tensor] = []
         self._transition_refund = self.nodes.new_zeros((self.minibatch_size, 1))
-        self._terminal_dispatch = False
         self._finalized = False
 
     def reset(self):
@@ -84,7 +83,6 @@ class DCVRPEnvironment:
         self._committed_customer_vehicle_mask[:, :, 0] = True
         self._clear_interval_events()
         self._transition_refund = self.nodes.new_zeros((B, 1))
-        self._terminal_dispatch = False
         self._finalized = False
         self._rebuild_mask()
         self._update_cur_veh()
@@ -94,6 +92,23 @@ class DCVRPEnvironment:
         cap_mask = self.vehicles[:, :, 2].unsqueeze(-1) < self.nodes[:, None, :, 2]
         self.mask = self.mask | cap_mask
         self.mask = self.mask | self.veh_done[:, :, None]
+
+        # Time feasibility constraint (Eq. 8): customer must be serviceable and vehicle able to return before horizon T
+        dist_to_cust = torch.norm(
+            self.vehicles[:, :, None, :2] - self.nodes[:, None, :, :2], dim=-1
+        )
+        travel_time = dist_to_cust / self.veh_speed
+        arrival_time = self.vehicles[:, :, None, 3] + travel_time
+        service_start = torch.maximum(arrival_time, self.nodes[:, None, :, 4])
+        service_finish = service_start + self.nodes[:, None, :, 3]
+        dist_to_depot = torch.norm(
+            self.nodes[:, None, :, :2] - self.nodes[:, None, 0:1, :2], dim=-1
+        )
+        return_time = service_finish + dist_to_depot / self.veh_speed
+        time_mask = return_time > (self.horizon + 1e-6)
+        time_mask[:, :, 0] = False
+        self.mask = self.mask | time_mask
+
         # Allow returning to depot only when all other dynamic customers cannot be served
         has_feasible_customer = (~self.mask[:, :, 1:]).any(dim=2)
         self.mask[:, :, 0] = has_feasible_customer
@@ -310,15 +325,8 @@ class DCVRPEnvironment:
         self._update_mask_after_action(cust_idx)
         reward = -distance
 
-        if (
-            self.done
-            and self.current_segment == self.segment_count - 1
-            and not self._terminal_dispatch
-        ):
-            self._segment_transition(self.horizon)
-            self._terminal_dispatch = True
-            reward = reward + self._transition_refund
-        elif self.done and self.current_segment >= self.segment_count:
+        if self.done and self.current_segment >= self.segment_count - 1:
+            # Reached planning horizon T: apply penalty for any unserved customers (Eq. 14)
             pending = (~self.served).float().sum(-1, keepdim=True) - 1
             reward = reward - self.pending_cost * pending
             self.pending_customers = pending

@@ -92,12 +92,10 @@ def generate_dataset(
         10, 32, (batch_size, customer_count, 1), dtype=torch.int64
     ).float()
 
-    # 4. Poisson revelation process for dynamic customers
-    slot_rates = torch.linspace(1.0, float(horizon), steps=customer_count).view(
-        1, customer_count, 1
-    )
+    # 4. Poisson revelation process for dynamic customers (Eq. 34: lambda = (1 + T) / 2 = 240.5)
+    poisson_rate = float((1.0 + horizon) / 2.0)
     disclosure_minutes = torch.poisson(
-        slot_rates.expand(batch_size, -1, -1)
+        torch.full((batch_size, customer_count, 1), poisson_rate)
     ).clamp_(min=1.0, max=float(horizon))
 
     # 5. Dynamic customer assignment
