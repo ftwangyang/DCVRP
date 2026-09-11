@@ -129,9 +129,6 @@ python eval.py --method Greedy
 To evaluate all 6 methods (Greedy + 5 neural models) and print a side-by-side Table I comparison:
 
 ```bash
-To evaluate all 6 methods (Greedy + 5 neural models) and print a side-by-side Table I comparison:
-
-```bash
 # Single scale: 20 customers, 4 vehicles
 python eval.py --method all -n 20 --compare-table1
 
