@@ -36,7 +36,7 @@ python eval.py --method Greedy -n 20
 python eval.py --method AMCVN -n 20
 ```
 
-Evaluation outputs (metrics, costs, and comparison tables) are automatically exported to [`results/`](results/).
+Evaluation outputs (metrics, costs, and comparison tables) are automatically exported to the `results/` directory.
 
 ### 3. Training from Scratch
 
@@ -62,26 +62,11 @@ python train.py --method DVNDA -n 50 -m 10 --epochs 100
 ├── models/             # Neural network architectures (DVNDA, AMCVN, LiDRL, etc.)
 ├── env/                # DCVRP dynamic simulation environment & dataset generator
 ├── checkpoints/        # Pretrained model weights (n=20, 35, 50)
-├── results/            # Benchmark reproduction logs (CSV, JSON, Markdown)
+├── results/            # Evaluation outputs (auto-created upon running eval.py)
 ├── train.py            # Training script (REINFORCE with Rollout Baseline)
 ├── eval.py             # Evaluation script for benchmark reproduction
 ├── requirements.txt    # Python dependencies
 └── README.md
-```
-
----
-
-## 📚 Citation
-
-If you find this codebase helpful in your research, please cite:
-
-```bibtex
-@article{wang2026distributed,
-  title={Distributed Vehicle Network with Decision Aggregation for Dynamic Capacitated Vehicle Routing Problem},
-  author={Wang, Yang and Jia, Ya-Hui and Yang, Qiang and Wei, Feng-Feng and Lin, Zhenhong and Chen, Wei-Neng},
-  journal={IEEE Transactions},
-  year={2026}
-}
 ```
 
 ---
