@@ -44,9 +44,12 @@ class BaseSelector(nn.Module):
         safe_done[all_done, 0] = False
         logits = self.scores(vehicles, customers, safe_done, customer_mask)
         logits = logits.masked_fill(safe_done, -torch.inf)
-        # Eq. 27: Decision aggregation selects vehicle with highest score (argmax)
-        index = logits.argmax(dim=1)
-        # Log probability of the argmax choice under softmax
+        # Eq. 27: Decision aggregation selects vehicle with highest score (argmax during evaluation, sampling during training)
+        if greedy and self.evaluation_rule == "argmax":
+            index = logits.argmax(dim=1)
+        else:
+            index = Categorical(logits=logits).sample()
+        # Differentiable log probability of the selected vehicle under softmax
         log_probability = logits.log_softmax(dim=1).gather(1, index.unsqueeze(1))
         return index.unsqueeze(1), logits, log_probability
 

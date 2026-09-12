@@ -167,11 +167,9 @@ def generate_evaluation_split(
         10, 32, (instances, customer_count, 1), dtype=torch.int64
     ).float()
 
-    slot_rates = torch.linspace(1.0, float(horizon), steps=customer_count).view(
-        1, customer_count, 1
-    )
+    poisson_rate = float((1.0 + horizon) / 2.0)
     disclosure_minutes = torch.poisson(
-        slot_rates.expand(instances, -1, -1)
+        torch.full((instances, customer_count, 1), poisson_rate)
     ).clamp_(min=1.0, max=float(horizon))
 
     dynamic_order = torch.argsort(torch.rand(instances, customer_count), dim=1)

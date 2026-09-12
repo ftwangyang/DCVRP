@@ -34,8 +34,7 @@ class AttentionLearner(nn.Module):
         self.inverse_sqrt_dimension = model_size ** -0.5
         self.tanh_exploration = tanh_exploration
         self.greedy = False
-        self.vehicle_greedy: bool | None = None
-        self.include_vehicle_log_probability = False  # Eq. 27: vehicle selection is argmax
+        self.include_vehicle_log_probability = True  # Joint policy: log p(a_t) = log p(v_t) + log p(c_t)
 
         # 1. Feature Embeddings
         self.depot_embedding = nn.Linear(customer_feature_size, model_size)

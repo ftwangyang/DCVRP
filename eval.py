@@ -103,15 +103,9 @@ def evaluate_neural(
     selector = build_selector(method, vehicle_count=vehicle_count)
     model = AttentionLearner(selector)
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    compat_state = {
-        k: v for k, v in checkpoint["model"].items()
-        if k in model.state_dict() and v.shape == model.state_dict()[k].shape
-    }
-    model.load_state_dict(compat_state, strict=False)
+    model.load_state_dict(checkpoint["model"], strict=True)
     model.eval()
     model.greedy = True
-    model.vehicle_greedy = True
-    model.include_vehicle_log_probability = False
     model = model.to(device)
 
     # Warm-up pass to initialize CUDA context and kernel caches
