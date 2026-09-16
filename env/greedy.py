@@ -109,20 +109,14 @@ def run_greedy(
                     distances = torch.norm(
                         nodes[candidates, :2] - positions[vehicle], dim=1
                     )
-                    # Time feasibility check (Eq. 8): must complete service and return to depot before horizon T
+                    # Constraint (8): service must start before horizon T.
                     travel_times = distances / speed
                     start_times = torch.maximum(now + travel_times, nodes[candidates, 4])
-                    finish_times = start_times + nodes[candidates, 3]
-                    dist_to_depot = torch.norm(nodes[candidates, :2] - depot, dim=1)
-                    return_times = finish_times + dist_to_depot / speed
-                    time_feasible = return_times <= (horizon + 1e-6)
-
+                    time_feasible = start_times <= (horizon + 1e-6)
                     feas_candidates = candidates[time_feasible]
                     if feas_candidates.numel() == 0:
                         continue
                     feas_distances = distances[time_feasible]
-
-                    # Pure nearest available task (Section IV-A)
                     best_idx = feas_distances.argmin()
                     customer = int(feas_candidates[best_idx].item())
                     leg = float(feas_distances[best_idx].item())

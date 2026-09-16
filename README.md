@@ -40,17 +40,19 @@ Evaluation outputs (metrics, costs, and comparison tables) are automatically exp
 
 ### 3. Training from Scratch
 
-To train models from scratch:
+Paper-aligned training follows Algorithm 1 execution (routes are executed to the fixed time boundary and vehicle clocks are synchronized to \(T_{r+1}\)) and Algorithm 2: REINFORCE with a greedy rollout baseline, 3 sampled policy rollouts, Eq. 27 vehicle argmax, and Eq. 14 depot-return cost.
 
 ```bash
-# Train DVNDA on scale n=20
-python train.py --method DVNDA -n 20 -m 4 --epochs 100
+# Fine-tune DVNDA on n=20 / 35 / 50 from the current checkpoints
+python scripts/retrain_dvnda.py --epochs 100 --device cuda
 
-# Train DVNDA on scale n=35
-python train.py --method DVNDA -n 35 -m 7 --epochs 100
+# Or train one scale
+python train.py --method DVNDA -n 20 -m 4 --epochs 100 --rollouts 3 --init-from checkpoints/DVNDA.pt --output-dir checkpoints/paper_align
+python train.py --method DVNDA -n 35 -m 7 --epochs 100 --rollouts 3 --init-from checkpoints/DVNDA_n35.pt --output-dir checkpoints/paper_align
+python train.py --method DVNDA -n 50 -m 10 --epochs 100 --rollouts 3 --init-from checkpoints/DVNDA_n50.pt --output-dir checkpoints/paper_align
 
-# Train DVNDA on scale n=50
-python train.py --method DVNDA -n 50 -m 10 --epochs 100
+# Multi-seed search from scratch; stop a seed at epoch 10 if Table I MAE > 8%
+python scripts/multiseed_dvnda.py -n 20 --seeds 42 7 2024 3407 20260821 --from-scratch --early-stop-epoch 10 --early-stop-mae 8
 ```
 
 ---

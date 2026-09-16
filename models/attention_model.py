@@ -34,7 +34,12 @@ class AttentionLearner(nn.Module):
         self.inverse_sqrt_dimension = model_size ** -0.5
         self.tanh_exploration = tanh_exploration
         self.greedy = False
-        self.include_vehicle_log_probability = True  # Joint policy: log p(a_t) = log p(v_t) + log p(c_t)
+        # Eq. 27 is argmax, so vehicle selection is always greedy. The flag is
+        # retained so checkpoints / trainers can set it without AttributeError.
+        self.vehicle_greedy: bool | None = True
+        # Eq. 33 uses log p_theta(pi|S). Vehicle scores still contribute the
+        # log-probability of the argmax vehicle so the selector receives gradient.
+        self.include_vehicle_log_probability = True
 
         # 1. Feature Embeddings
         self.depot_embedding = nn.Linear(customer_feature_size, model_size)
@@ -129,9 +134,7 @@ class AttentionLearner(nn.Module):
             set_environment(environment)
         try:
             environment.selector = self.selector
-            environment.policy_greedy = (
-                self.greedy if self.vehicle_greedy is None else self.vehicle_greedy
-            )
+            environment.policy_greedy = True  # Eq. 27 argmax, independent of node sampling
             environment.reset()
             self._encode_customers(environment.nodes, environment.cust_mask)
 
@@ -143,6 +146,9 @@ class AttentionLearner(nn.Module):
 
             actions, action_log_probabilities, rewards = [], [], []
             while not environment.done:
+                if environment.interval_advanced:
+                    last_visited_nodes = environment.last_node.clone()
+                    environment.interval_advanced = False
                 if environment.new_customers:
                     self._encode_customers(environment.nodes, environment.cust_mask)
                     environment.new_customers = False

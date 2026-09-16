@@ -44,12 +44,12 @@ class BaseSelector(nn.Module):
         safe_done[all_done, 0] = False
         logits = self.scores(vehicles, customers, safe_done, customer_mask)
         logits = logits.masked_fill(safe_done, -torch.inf)
-        # Eq. 27: Decision aggregation selects vehicle with highest score (argmax during evaluation, sampling during training)
-        if greedy and self.evaluation_rule == "argmax":
-            index = logits.argmax(dim=1)
-        else:
-            index = Categorical(logits=logits).sample()
-        # Differentiable log probability of the selected vehicle under softmax
+        del greedy
+        # Eq. 27: k* = argmax_k l_k in both training and evaluation.
+        # Customer selection (Eq. 31) remains the stochastic policy. Vehicle
+        # log-probabilities are still returned so REINFORCE can credit the
+        # selected vehicle without replacing argmax by sampling.
+        index = logits.argmax(dim=1)
         log_probability = logits.log_softmax(dim=1).gather(1, index.unsqueeze(1))
         return index.unsqueeze(1), logits, log_probability
 
@@ -401,7 +401,7 @@ class RoundRobinSelector(BaseSelector):
 
 
 class RandomSelector(BaseSelector):
-    """Random vehicle selection policy."""
+    """Random vehicle selection policy (diagnostic only; not a paper baseline)."""
 
     def scores(
         self,
@@ -411,6 +411,24 @@ class RandomSelector(BaseSelector):
         customer_mask: torch.Tensor,
     ) -> torch.Tensor:
         return vehicles.new_zeros((vehicles.size(0), self.vehicle_count))
+
+    def select(
+        self,
+        vehicles: torch.Tensor,
+        customers: torch.Tensor,
+        vehicle_done: torch.Tensor,
+        customer_mask: torch.Tensor,
+        greedy: bool,
+    ):
+        del greedy
+        safe_done = vehicle_done.clone()
+        all_done = safe_done.all(dim=1)
+        safe_done[all_done, 0] = False
+        logits = self.scores(vehicles, customers, safe_done, customer_mask)
+        logits = logits.masked_fill(safe_done, -torch.inf)
+        index = Categorical(logits=logits).sample()
+        log_probability = logits.log_softmax(dim=1).gather(1, index.unsqueeze(1))
+        return index.unsqueeze(1), logits, log_probability
 
 
 def build_selector(

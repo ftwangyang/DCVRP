@@ -49,12 +49,14 @@ python eval.py --method all -n all --compare-table1 --save-dir results
 
 ## Model Parameter Summary
 
-| Method | Vehicle Selector Type | Shared Parameters | Selector Parameters | Total Trainable Parameters |
-|:-------|:----------------------|:-----------------:|:-------------------:|:--------------------------:|
-| **DVNDA** (Ours) | Distributed Vehicle Networks with Decision Aggregation | 561,029 | 143,109 | **704,138** |
-| **AMCVN** | Centralized Multi-Head Fleet Attention | 561,029 | 64,133 | **625,162** |
-| **LiDRL** | Tour History Recurrent Network | 561,029 | 114,949 | **675,978** |
-| **MAAM** | Round-Robin Dispatch Rule | 561,029 | 0 | **561,029** |
-| **MARDAM** | Earliest-Available Dispatch Rule | 561,029 | 0 | **561,029** |
+| Method | Vehicle Selector Type | Shared Encoder/Decoder | Selector (n=20, m=4) | Total (n=20) |
+|:-------|:----------------------|:----------------------:|:--------------------:|:------------:|
+| **DVNDA** (Ours) | Distributed Vehicle Networks with Decision Aggregation | 709,504 | 183,556 | **893,060** |
+| **AMCVN** | Centralized vehicle network | 709,504 | 83,841 | **793,345** |
+| **LiDRL** | Tour-history vehicle selector | 709,504 | 150,404 | **859,908** |
+| **MAAM** | Round-robin dispatch rule | 709,504 | 0 | **709,504** |
+| **MARDAM** | Earliest-available dispatch rule | 709,504 | 0 | **709,504** |
 
-All models share an identical 3-layer 8-head Transformer encoder ($d=128, d_{ff}=512$) and attention pointer decoder with $C=10$ tanh exploration.
+DVNDA selector parameters scale with the fleet: **1,030,727** at n=35 (m=7) and **1,168,394** at n=50 (m=10). Shared encoder/decoder size is 709,504 at every scale.
+
+All models share an identical 3-layer 8-head Transformer encoder ($d=128, d_{ff}=512$) and attention pointer decoder with $C=10$ tanh exploration. Vehicle selection follows Eq. 27 (argmax).

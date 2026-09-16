@@ -53,6 +53,65 @@ TABLE1_BENCHMARK = {
     },
 }
 
+# Absolute Table I acceptance: every dynamic-rate cell, not the average MAE.
+TABLE1_CELL_GAP_LIMIT = 5.0
+
+
+def table1_gap_report(
+    customer_count: int,
+    method: str,
+    measured_by_rate: dict[float, float],
+    cell_limit: float = TABLE1_CELL_GAP_LIMIT,
+    qos_by_rate: dict[float, float] | None = None,
+    min_qos_percent: float | None = None,
+) -> dict:
+    """Compare measured mean costs with Table I, cell by cell.
+
+    ``all_within`` is true only if every reported dynamic rate has
+    ``|gap| <= cell_limit``. A mean absolute error below the limit is not
+    enough when one phi is still outside the band.
+    """
+    targets = TABLE1_BENCHMARK.get(int(customer_count), {})
+    signed: dict[float, float] = {}
+    parts: list[str] = []
+    abs_gaps: list[float] = []
+    for rate in sorted(measured_by_rate, key=float):
+        key = round(float(rate), 2)
+        measured = float(measured_by_rate[rate])
+        target = targets.get(key, {}).get(method)
+        if not target:
+            continue
+        gap = (measured - float(target[0])) / float(target[0]) * 100.0
+        signed[key] = gap
+        abs_gaps.append(abs(gap))
+        mark = "PASS" if abs(gap) <= cell_limit + 1e-12 else "FAIL"
+        parts.append(f"{key:.2f}:{measured:.2f}({gap:+.1f}% {mark})")
+    mae = float(sum(abs_gaps) / len(abs_gaps)) if abs_gaps else None
+    max_abs = float(max(abs_gaps)) if abs_gaps else None
+    expected_rates = set(targets.keys())
+    have_every_rate = expected_rates.issubset(signed.keys())
+    all_within = (
+        have_every_rate
+        and bool(abs_gaps)
+        and all(gap <= cell_limit + 1e-12 for gap in abs_gaps)
+    )
+    qos_ok = True
+    if qos_by_rate is not None and min_qos_percent is not None:
+        qos_ok = all(
+            float(qos) + 1e-6 >= float(min_qos_percent) for qos in qos_by_rate.values()
+        )
+        all_within = all_within and qos_ok
+    return {
+        "signed": signed,
+        "abs_gaps": abs_gaps,
+        "mae": mae,
+        "max_abs": max_abs,
+        "all_within": all_within,
+        "qos_ok": qos_ok,
+        "parts": parts,
+        "cell_limit": float(cell_limit),
+    }
+
 
 def evaluate_greedy(
     split: dict[float, object],
@@ -63,6 +122,8 @@ def evaluate_greedy(
     rows = []
     for rate, dataset in split.items():
         start_time = time.perf_counter()
+        # Table I Greedy is the event-driven nearest-task rule with continuous
+        # revelation. Neural methods use the beta = 10 synchronized intervals.
         distances_t, qos_t = run_greedy(dataset, reveal="continuous")
         elapsed = time.perf_counter() - start_time
 
@@ -106,6 +167,7 @@ def evaluate_neural(
     model.load_state_dict(checkpoint["model"], strict=True)
     model.eval()
     model.greedy = True
+    model.vehicle_greedy = True
     model = model.to(device)
 
     # Warm-up pass to initialize CUDA context and kernel caches
@@ -191,17 +253,19 @@ def print_results(rows: list[dict]):
 
 def print_comparison_table(rows: list[dict]):
     """Print a side-by-side comparison between measured results and Table I targets."""
-    print(f"\n{'=' * 102}")
+    print(f"\n{'=' * 112}")
     print(f"  Table I Reproduction Verification vs Manuscript Benchmark")
-    print(f"{'=' * 102}")
+    print(f"  Gate: every dynamic-rate cell |cost gap| <= {TABLE1_CELL_GAP_LIMIT:.0f}%")
+    print(f"{'=' * 112}")
     print(
         f"{'Scale':<6} | {'Method':<8} | {'phi':<5} | {'Measured Cost':<18} | "
-        f"{'Table I Cost':<18} | {'Cost Gap':<9} | {'Measured QoS':<12} | {'Table I QoS':<11}"
+        f"{'Table I Cost':<18} | {'Cost Gap':<9} | {'<=5%':<5} | {'Measured QoS':<12} | {'Table I QoS':<11}"
     )
-    print(f"{'-' * 102}")
+    print(f"{'-' * 112}")
 
     gaps_by_method: dict[str, list[float]] = {}
     gaps_dvnda_by_scale: dict[int, list[float]] = {}
+    method_cell_pass: dict[str, list[bool]] = {}
 
     for r in rows:
         scale = r["customer_count"]
@@ -212,7 +276,9 @@ def print_comparison_table(rows: list[dict]):
         if target_info:
             target_mean, target_sd, target_qos, _ = target_info
             gap = (r["distance_mean"] - target_mean) / target_mean * 100.0
+            within = abs(gap) <= TABLE1_CELL_GAP_LIMIT + 1e-12
             gaps_by_method.setdefault(method, []).append(abs(gap))
+            method_cell_pass.setdefault(method, []).append(within)
             if method == "DVNDA":
                 gaps_dvnda_by_scale.setdefault(scale, []).append(abs(gap))
 
@@ -225,22 +291,31 @@ def print_comparison_table(rows: list[dict]):
             scale_str = f"n={scale}"
             print(
                 f"{scale_str:<6} | {method:<8} | {rate_label:<5} | {meas_cost:<18} | "
-                f"{targ_cost:<18} | {gap_str:<9} | {meas_qos:<12} | {targ_qos:<11}"
+                f"{targ_cost:<18} | {gap_str:<9} | {'PASS' if within else 'FAIL':<5} | "
+                f"{meas_qos:<12} | {targ_qos:<11}"
             )
-    print(f"{'=' * 102}")
+    print(f"{'=' * 112}")
 
     if gaps_dvnda_by_scale:
         print("\n--- DVNDA Reproduction Accuracy by Scale ---")
         for s, gaps in sorted(gaps_dvnda_by_scale.items()):
             mape = sum(gaps) / len(gaps)
             max_g = max(gaps)
-            print(f"  * Scale n={s:2d}: Mean Absolute Error = {mape:.2f}%, Max Error = {max_g:.2f}%")
+            all_ok = all(g <= TABLE1_CELL_GAP_LIMIT + 1e-12 for g in gaps)
+            print(
+                f"  * Scale n={s:2d}: MAE = {mape:.2f}%, Max cell = {max_g:.2f}%, "
+                f"all cells within +/-{TABLE1_CELL_GAP_LIMIT:.0f}%: {all_ok}"
+            )
     if gaps_by_method:
         print("\n--- Overall Method Mean Absolute Percentage Error (MAPE) ---")
         for m, gaps in gaps_by_method.items():
             mape = sum(gaps) / len(gaps)
-            print(f"  * {m:<8}: MAPE = {mape:.2f}% across {len(gaps)} cells")
-    print(f"{'=' * 102}\n")
+            all_ok = all(method_cell_pass.get(m, []))
+            print(
+                f"  * {m:<8}: MAPE = {mape:.2f}% across {len(gaps)} cells; "
+                f"all cells within +/-{TABLE1_CELL_GAP_LIMIT:.0f}%: {all_ok}"
+            )
+    print(f"{'=' * 112}\n")
 
 
 def export_results(
@@ -274,6 +349,7 @@ def export_results(
         "table1_qos_percent",
         "table1_time",
         "cost_gap_percent",
+        "within_5_percent",
         "checkpoint",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
@@ -304,6 +380,7 @@ def export_results(
                 "table1_qos_percent": t_qos,
                 "table1_time": t_time,
                 "cost_gap_percent": round(gap, 2) if gap is not None else None,
+                "within_5_percent": bool(abs(gap) <= TABLE1_CELL_GAP_LIMIT) if gap is not None else None,
                 "checkpoint": r.get("checkpoint", "heuristic" if method == "Greedy" else ""),
             })
     print(f"Exported raw tabular results to: {csv_path}")
@@ -335,10 +412,10 @@ def export_results(
         f.write(f"- **Instances per Dynamic Rate**: {instances}\n\n")
         f.write("## Reproduction Comparison Table\n\n")
         f.write(
-            "| Scale | Method | $\\phi$ | Measured Cost | Table I Cost | Gap (%) | Measured QoS | Table I QoS |\n"
+            "| Scale | Method | $\\phi$ | Measured Cost | Table I Cost | Gap (%) | Within $\\pm$5% | Measured QoS | Table I QoS |\n"
         )
         f.write(
-            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
         )
         for r in rows:
             scale = r["customer_count"]
@@ -349,13 +426,14 @@ def export_results(
                 t_mean, t_sd, t_qos, _ = t_info
                 gap = (r["distance_mean"] - t_mean) / t_mean * 100.0
                 gap_str = f"**{gap:+.2f}%**" if abs(gap) <= 1.0 else f"{gap:+.2f}%"
+                within = "yes" if abs(gap) <= TABLE1_CELL_GAP_LIMIT else "no"
                 meas_cost = f"{r['distance_mean']:.2f} ± {r['distance_sd']:.2f}"
                 targ_cost = f"{t_mean:.2f} ± {t_sd:.2f}"
                 meas_qos = f"{r['qos_mean']:.2f}%"
                 targ_qos = f"{t_qos:.2f}%" if t_qos < 100.0 else "100%"
                 rate_str = f"{int(rate * 100)}%"
                 f.write(
-                    f"| n={scale} | {method} | {rate_str} | {meas_cost} | {targ_cost} | {gap_str} | {meas_qos} | {targ_qos} |\n"
+                    f"| n={scale} | {method} | {rate_str} | {meas_cost} | {targ_cost} | {gap_str} | {within} | {meas_qos} | {targ_qos} |\n"
                 )
     print(f"Exported Markdown benchmark summary to: {md_path}")
 

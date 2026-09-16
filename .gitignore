@@ -16,7 +16,9 @@ __pycache__/
 results/
 scratch/
 tmp/
+logs/
 *.log
+checkpoints/paper_align_smoke/
 wandb/
 .pytest_cache/
 .coverage

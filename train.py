@@ -8,8 +8,10 @@ Hyperparameters strictly follow Section III-D (Algorithm 2) and Section IV-A of 
     * n = 35, 50: batch size 50, 500 steps/epoch, 100 epochs.
 - Network: 3-layer 8-head Transformer encoder (d=128, ff=512), C=10 tanh exploration.
 - Optimization: Adam optimizer with learning rate 1e-4, gradient norm clipping 2.0.
-- RL Algorithm: REINFORCE with Rollout Baseline (paired t-test update threshold alpha = 0.05).
+- RL Algorithm: REINFORCE with a greedy rollout baseline, 3 sampled policy
+  rollouts per instance, and paired t-test update threshold phi = 0.05 (Algorithm 2).
 - Penalty: alpha = 5.0 for unserved customers (Eq. 14).
+- Vehicle selection follows Eq. 27 (argmax); customers follow Eq. 31 (sample / greedy).
 """
 
 from __future__ import annotations
@@ -33,12 +35,36 @@ from env import (
     DEFAULT_VEHICLE_CAPACITY,
     DEFAULT_VEHICLE_COUNT,
     DEFAULT_VEHICLE_SPEED,
+    DCVRPDataset,
     DCVRPEnvironment,
     generate_dataset,
     generate_evaluation_split,
     set_seed,
 )
+from eval import TABLE1_CELL_GAP_LIMIT, table1_gap_report
 from models import AttentionLearner, build_selector
+
+
+def repeat_rollout_batch(data: DCVRPDataset, repeats: int) -> DCVRPDataset:
+    """Expand a batch for parallel independent policy rollouts.
+
+    Averaging the REINFORCE loss over this expanded batch is exactly the
+    arithmetic mean of ``repeats`` serial rollout losses; only execution is
+    vectorized. Instance rows remain adjacent so baseline returns can use the
+    same ``repeat_interleave`` ordering.
+    """
+    if repeats < 1:
+        raise ValueError("repeats must be at least one")
+    mask = None
+    if data.cust_mask is not None:
+        mask = data.cust_mask.repeat_interleave(repeats, dim=0)
+    return DCVRPDataset(
+        vehicle_count=data.veh_count,
+        vehicle_capacity=data.veh_capa,
+        vehicle_speed=data.veh_speed,
+        nodes=data.nodes.repeat_interleave(repeats, dim=0),
+        customer_mask=mask,
+    )
 
 
 class RolloutBaseline:
@@ -63,8 +89,12 @@ class RolloutBaseline:
 
     @torch.no_grad()
     def eval(self, data, device: torch.device) -> torch.Tensor:
-        """Compute baseline return on a batch of training instances."""
-        env = DCVRPEnvironment(data, nodes=data.nodes.to(device), pending_cost=5.0)
+        """Greedy rollout return used as R_{pi_BL} in Eq. 33.
+
+        A deterministic greedy policy yields identical repeats, so one greedy
+        rollout is exactly the mean of the paper's three baseline rollouts.
+        """
+        env = DCVRPEnvironment(data, nodes=data.nodes.to(device), pending_cost=5.0, record_trace=False)
         _, _, rewards = self.model(env)
         return torch.stack(rewards).sum(dim=0)
 
@@ -83,11 +113,11 @@ class RolloutBaseline:
         candidate_eval.greedy = True
         candidate_eval.vehicle_greedy = True
 
-        env_c = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(self.device), pending_cost=5.0)
+        env_c = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(self.device), pending_cost=5.0, record_trace=False)
         _, _, r_c = candidate_eval(env_c)
         returns_candidate = torch.stack(r_c).sum(dim=0).squeeze(-1).cpu().numpy()
 
-        env_b = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(self.device), pending_cost=5.0)
+        env_b = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(self.device), pending_cost=5.0, record_trace=False)
         _, _, r_b = self.model(env_b)
         returns_baseline = torch.stack(r_b).sum(dim=0).squeeze(-1).cpu().numpy()
 
@@ -173,6 +203,12 @@ def parse_args():
         help="Path to an existing checkpoint to resume training from.",
     )
     parser.add_argument(
+        "--init-from",
+        type=Path,
+        default=None,
+        help="Load model weights only and start a fresh epoch counter (fine-tune).",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("checkpoints"),
@@ -183,6 +219,28 @@ def parse_args():
         type=str,
         default="cuda" if torch.cuda.is_available() else "cpu",
         help="Computation device ('cuda' or 'cpu').",
+    )
+    parser.add_argument(
+        "--rollouts",
+        type=int,
+        default=3,
+        help="Sampled policy rollouts per training instance (paper: 3).",
+    )
+    parser.add_argument(
+        "--early-stop-epoch",
+        type=int,
+        default=20,
+        help="Abort if any Table I cell is still outside the per-rate band at this epoch.",
+    )
+    parser.add_argument(
+        "--early-stop-mae",
+        type=float,
+        default=TABLE1_CELL_GAP_LIMIT,
+        help=(
+            "Per-dynamic-rate absolute Table I gap percent. Every phi must be "
+            "within this band; mean MAE alone does not pass. Training also "
+            "stops early once every cell is inside +/-5% with 100% QoS."
+        ),
     )
     return parser.parse_args()
 
@@ -204,11 +262,18 @@ def train(args):
     suffix = f"_n{args.customer_count}" if args.customer_count != DEFAULT_CUSTOMER_COUNT else ""
     checkpoint_path = args.output_dir / f"{args.method}{suffix}.pt"
     best_checkpoint_path = args.output_dir / f"{args.method}{suffix}_best.pt"
+    table1_best_checkpoint_path = args.output_dir / f"{args.method}{suffix}_table1_best.pt"
 
     print("=" * 76)
     print(f"  Training DCVRP Model: {args.method}")
     print(f"  Scale: n = {args.customer_count} customers, m = {args.vehicle_count} vehicles")
     print(f"  Hyperparameters: {args.epochs} epochs, {args.steps_per_epoch} steps/epoch, batch size {args.batch_size}")
+    print(f"  Policy rollouts: {args.rollouts} | Vehicle rule: Eq.27 argmax | Baseline: greedy rollout + t-test 0.05")
+    print(
+        f"  Seed: {args.seed} | Table I gate: every phi |gap| <= "
+        f"{args.early_stop_mae:.1f}% by epoch {args.early_stop_epoch} "
+        f"(not mean MAE)"
+    )
     print(f"  Optimizer: Adam (lr={args.lr}, clip={args.max_grad_norm}), Device: {device}")
     print("=" * 76)
 
@@ -228,8 +293,19 @@ def train(args):
 
     start_epoch = 1
     best_val_dist = float("inf")
+    best_val_objective = float("inf")
+    best_table1_max = float("inf")
+    last_table1_all_within = False
 
-    if args.resume and args.resume.exists():
+    if args.init_from and args.init_from.exists():
+        print(f"Initializing weights from: {args.init_from}")
+        chk = torch.load(args.init_from, map_location=device, weights_only=False)
+        model.load_state_dict(chk["model"], strict=True)
+        start_epoch = 1
+        best_val_dist = float("inf")
+        best_val_objective = float("inf")
+        print("Loaded weights; epoch counter reset for paper-aligned fine-tuning.")
+    elif args.resume and args.resume.exists():
         print(f"Resuming training from checkpoint: {args.resume}")
         chk = torch.load(args.resume, map_location=device, weights_only=False)
         model.load_state_dict(chk["model"])
@@ -239,10 +315,20 @@ def train(args):
             print(f"Transfer learning from scale n={chk.get('customer_count')} to n={args.customer_count}")
             start_epoch = 1
             best_val_dist = float("inf")
+            best_val_objective = float("inf")
         else:
             start_epoch = chk.get("epoch", 0) + 1
-            best_val_dist = chk.get("val_distance", float("inf"))
-        print(f"Resumed weights loaded (best val dist: {best_val_dist:.2f})")
+            prev_val = chk.get("val_distance", float("inf"))
+            best_val_dist = float("inf") if prev_val == 0.0 else float(prev_val)
+            best_val_objective = float(chk.get("val_objective", float("inf")))
+            prev_table1 = chk.get("table1_max_gap")
+            if prev_table1 is not None:
+                best_table1_max = float(prev_table1)
+            last_table1_all_within = bool(chk.get("table1_all_within", False))
+        print(
+            f"Resumed weights loaded (last val distance: {best_val_dist:.2f}, "
+            f"objective: {best_val_objective:.2f})"
+        )
 
     # Fixed validation dataset across dynamic rates
     val_split = generate_evaluation_split(
@@ -253,6 +339,14 @@ def train(args):
         seed=args.seed + 9999,
     )
     baseline_dataset = val_split[0.50]
+    table1_split = generate_evaluation_split(
+        instances=args.val_size,
+        dynamic_rates=DEFAULT_DYNAMIC_RATES,
+        customer_count=args.customer_count,
+        vehicle_count=args.vehicle_count,
+        seed=20260821,
+    )
+    set_seed(args.seed)
     baseline = RolloutBaseline(
         model,
         device=device,
@@ -275,24 +369,37 @@ def train(args):
                 dynamic_rate=rate,
             )
 
-            env = DCVRPEnvironment(data, nodes=data.nodes.to(device), pending_cost=5.0)
-            _, log_probabilities, rewards = model(env)
-
-            policy_returns = torch.stack(rewards).sum(dim=0)  # (B, 1)
-
             with torch.no_grad():
                 baseline_returns = baseline.eval(data, device)
 
-            advantage = policy_returns - baseline_returns
-            log_prob = torch.stack(log_probabilities).sum(dim=0)
-            loss = -(log_prob * advantage.detach()).mean()
-
             optimizer.zero_grad()
-            loss.backward()
+            rollout_data = repeat_rollout_batch(data, args.rollouts)
+            env = DCVRPEnvironment(
+                rollout_data,
+                nodes=rollout_data.nodes.to(device),
+                pending_cost=5.0,
+                record_trace=False,
+            )
+            _, log_probabilities, rewards = model(env)
+            log_prob = torch.stack(log_probabilities).sum(0)
+            policy_returns = torch.stack(rewards).sum(0)
+            repeated_baseline = baseline_returns.repeat_interleave(
+                args.rollouts, dim=0
+            )
+            advantage = policy_returns - repeated_baseline
+            rollout_loss = -(log_prob * advantage.detach()).mean()
+            rollout_loss.backward()
+            step_loss = rollout_loss.item()
+
             clip_grad_norm_(model.parameters(), args.max_grad_norm)
             optimizer.step()
-
-            total_loss += loss.item()
+            total_loss += step_loss
+            if step == 1 or step % 10 == 0 or step == args.steps_per_epoch:
+                print(
+                    f"         step {step}/{args.steps_per_epoch} "
+                    f"loss {step_loss:.4f}",
+                    flush=True,
+                )
 
         epoch_time = time.perf_counter() - epoch_start
         avg_loss = total_loss / args.steps_per_epoch
@@ -312,22 +419,73 @@ def train(args):
             model_eval.vehicle_greedy = True
 
             for v_rate, v_data in val_split.items():
-                env_val = DCVRPEnvironment(v_data, nodes=v_data.nodes.to(device), pending_cost=0.0)
+                env_val = DCVRPEnvironment(v_data, nodes=v_data.nodes.to(device), pending_cost=0.0, record_trace=False)
                 model_eval(env_val)
                 val_dists.append(env_val.route_distance().mean().item())
                 val_qoss.append(env_val.qos().mean().item() * 100.0)
 
         mean_val_dist = float(np.mean(val_dists))
         mean_val_qos = float(np.mean(val_qoss))
+        mean_val_unserved = args.customer_count * (1.0 - mean_val_qos / 100.0)
+        mean_val_objective = mean_val_dist + 5.0 * mean_val_unserved
 
         update_tag = " [Baseline Updated]" if baseline_updated else ""
+        rate_str = " ".join(
+            f"{float(rate):.2f}:{dist:.2f}"
+            for rate, dist in zip(val_split.keys(), val_dists)
+        )
         print(
             f"Epoch {epoch:3d}/{args.epochs} | Loss: {avg_loss:8.4f} | "
             f"Val Dist: {mean_val_dist:6.2f} | Val QoS: {mean_val_qos:5.1f}% | "
-            f"Time: {epoch_time:5.1f}s{update_tag}"
+            f"Val Obj: {mean_val_objective:6.2f} | "
+            f"Time: {epoch_time:5.1f}s{update_tag}",
+            flush=True,
         )
+        print(f"         val-by-phi {rate_str}", flush=True)
+        qos_str = " ".join(
+            f"{float(rate):.2f}:{qos:.1f}%"
+            for rate, qos in zip(val_split.keys(), val_qoss)
+        )
+        print(f"         val-qos-by-phi {qos_str}", flush=True)
 
-        # Save standard clean checkpoint
+        table1_measured: dict[float, float] = {}
+        table1_qos: dict[float, float] = {}
+        with torch.no_grad():
+            for t_rate, t_data in table1_split.items():
+                env_t = DCVRPEnvironment(
+                    t_data, nodes=t_data.nodes.to(device), pending_cost=0.0,
+                    record_trace=False,
+                )
+                model_eval(env_t)
+                key = round(float(t_rate), 2)
+                table1_measured[key] = env_t.route_distance().mean().item()
+                table1_qos[key] = env_t.qos().mean().item() * 100.0
+        table1_report = table1_gap_report(
+            args.customer_count,
+            args.method,
+            table1_measured,
+            cell_limit=float(args.early_stop_mae),
+            qos_by_rate=table1_qos,
+            min_qos_percent=100.0,
+        )
+        table1_mae = table1_report["mae"]
+        table1_max = table1_report["max_abs"]
+        last_table1_all_within = bool(table1_report["all_within"])
+        table1_all_within = last_table1_all_within
+        if table1_report["parts"]:
+            within_tag = "YES" if table1_all_within else "NO"
+            print(
+                f"         table1-phi {' '.join(table1_report['parts'])} | "
+                f"MAE {table1_mae:.2f}% max {table1_max:.2f}% | "
+                f"all-within-{args.early_stop_mae:.0f}% {within_tag}",
+                flush=True,
+            )
+            qos_phi = " ".join(
+                f"{rate:.2f}:{qos:.1f}%" for rate, qos in table1_qos.items()
+            )
+            print(f"         table1-qos-by-phi {qos_phi}", flush=True)
+
+        param_count = int(sum(p.numel() for p in model.parameters()))
         checkpoint_dict = {
             "epoch": epoch,
             "customer_count": args.customer_count,
@@ -335,18 +493,89 @@ def train(args):
             "method": args.method,
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
-            "val_distance": mean_val_dist,
-            "val_qos": mean_val_qos,
+            "val_distance": float(mean_val_dist),
+            "val_qos": float(mean_val_qos),
+            "val_unserved": float(mean_val_unserved),
+            "val_objective": float(mean_val_objective),
+            "val_distance_by_rate": {
+                str(rate): float(dist)
+                for rate, dist in zip(val_split.keys(), val_dists)
+            },
+            "val_qos_by_rate": {
+                str(rate): float(qos)
+                for rate, qos in zip(val_split.keys(), val_qoss)
+            },
+            "parameter_count": param_count,
+            "rollouts": int(args.rollouts),
+            "seed": int(args.seed),
+            "table1_mae": table1_mae,
+            "table1_max_gap": table1_max,
+            "table1_gap_by_rate": {
+                str(rate): float(gap) for rate, gap in table1_report["signed"].items()
+            },
+            "table1_cost_by_rate": {
+                str(rate): float(cost) for rate, cost in table1_measured.items()
+            },
+            "table1_qos_by_rate": {
+                str(rate): float(qos) for rate, qos in table1_qos.items()
+            },
+            "table1_all_within": table1_all_within,
+            "table1_cell_limit": float(args.early_stop_mae),
         }
         torch.save(checkpoint_dict, checkpoint_path)
 
-        if mean_val_dist < best_val_dist:
+        publish = {
+            key: value
+            for key, value in checkpoint_dict.items()
+            if key != "optimizer"
+        }
+        if mean_val_objective < best_val_objective:
+            best_val_objective = mean_val_objective
             best_val_dist = mean_val_dist
-            torch.save(checkpoint_dict, best_checkpoint_path)
+            torch.save(publish, best_checkpoint_path)
+        if table1_max is not None and table1_max < best_table1_max:
+            best_table1_max = table1_max
+            torch.save(publish, table1_best_checkpoint_path)
+        if last_table1_all_within:
+            print(
+                f"         Table I gate passed: every phi |gap| <= "
+                f"{args.early_stop_mae:.1f}% with 100% QoS. Stopping.",
+                flush=True,
+            )
+            break
+        if (
+            epoch == args.early_stop_epoch
+            and table1_max is not None
+            and table1_max > args.early_stop_mae
+        ):
+            print(
+                f"         Table I gate failed at epoch {epoch}: max cell "
+                f"|gap| {table1_max:.2f}% > {args.early_stop_mae:.1f}%. Stopping.",
+                flush=True,
+            )
+            break
 
     print(f"\nTraining completed. Final checkpoint saved to: {checkpoint_path}")
     if best_checkpoint_path.exists():
-        print(f"Best validation checkpoint saved to: {best_checkpoint_path} (Val Dist: {best_val_dist:.2f})")
+        print(
+            f"Best validation checkpoint saved to: {best_checkpoint_path} "
+            f"(objective: {best_val_objective:.2f}, distance: {best_val_dist:.2f})"
+        )
+    if table1_best_checkpoint_path.exists():
+        print(
+            f"Best Table I checkpoint saved to: {table1_best_checkpoint_path} "
+            f"(max cell |gap|: {best_table1_max:.2f}%; "
+            f"all-within-{args.early_stop_mae:.0f}%: "
+            f"{'YES' if last_table1_all_within else 'NO'})"
+        )
+    return {
+        "seed": int(args.seed),
+        "best_val_dist": None if best_val_dist == float("inf") else float(best_val_dist),
+        "best_val_objective": None if best_val_objective == float("inf") else float(best_val_objective),
+        "best_table1_max_gap": None if best_table1_max == float("inf") else float(best_table1_max),
+        "table1_all_within": bool(last_table1_all_within),
+        "checkpoint": str(checkpoint_path),
+    }
 
 
 def main():
