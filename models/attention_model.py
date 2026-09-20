@@ -34,27 +34,27 @@ class AttentionLearner(nn.Module):
         self.inverse_sqrt_dimension = model_size ** -0.5
         self.tanh_exploration = tanh_exploration
         self.greedy = False
-        # Eq. 27 is argmax, so vehicle selection is always greedy. The flag is
-        # retained so checkpoints / trainers can set it without AttributeError.
-        self.vehicle_greedy: bool | None = True
-        # Eq. 33 uses log p_theta(pi|S). Vehicle scores still contribute the
-        # log-probability of the argmax vehicle so the selector receives gradient.
-        self.include_vehicle_log_probability = True
+        # None: vehicle decode follows ``greedy``. Training samples from the
+        # vehicle scores so the scoring head receives a REINFORCE gradient.
+        # Evaluation sets this True (Eq. 27 argmax).
+        self.vehicle_greedy: bool | None = None
+        self.vehicle_repr_size = int(getattr(selector, "representation_size", 64))
 
         # 1. Feature Embeddings
         self.depot_embedding = nn.Linear(customer_feature_size, model_size)
         self.customer_embedding = nn.Linear(customer_feature_size, model_size)
+        self.project_vehicle_hidden = nn.Linear(self.vehicle_repr_size, model_size)
 
         # 2. 3-Layer Transformer Customer Encoder (Eqs. 16-20)
         self.customer_encoder = TransformerEncoder(
             layer_count, head_count, model_size, ff_size
         )
 
-        # 3. Node Selection Decoder (Eqs. 28-31)
-        # Context vector H_c^T combines graph embedding \bar{h}_G and last node embedding h_{last} (Eq. 28) -> query_size = 2 * model_size
+        # 3. Node Selection Decoder. H_c^T = [h_G, h_last, h_{k*}] with
+        # h_{k*} = ReLU(W1 I_{k*} + b1) from the selected vehicle network.
         self.decoder_attention = MultiHeadAttention(
             head_count=head_count,
-            query_size=2 * model_size,
+            query_size=3 * model_size,
             key_size=model_size,
             value_size=model_size,
         )
@@ -89,15 +89,21 @@ class AttentionLearner(nn.Module):
             1, last_node_idx.unsqueeze(2).expand(-1, -1, self.model_size)
         )  # (B, 1, d)
 
-        # 2. Graph embedding \bar{h}_{G, k*} from vehicle k*'s perspective (Eq. 28)
-        visible = (~environment.cur_veh_mask).float()  # (B, 1, N)
-        denom = visible.sum(dim=2, keepdim=True).clamp_min(1.0)
-        h_G = (self.encoded_customers * visible.transpose(1, 2)).sum(
+        # 2. Graph embedding \bar{h}_{G,k*} over C_available (Eq. 23)
+        available = (~environment.cust_mask) & (~environment.served)
+        available[:, 0] = False
+        denom = available.float().sum(dim=1, keepdim=True).clamp_min(1.0)
+        h_G = (self.encoded_customers * available.unsqueeze(2)).sum(
             dim=1, keepdim=True
-        ) / denom  # (B, 1, d)
+        ) / denom.unsqueeze(2)
 
-        # 3. Form combined context vector H_c^T = [\bar{h}_{G, k*}, h_{last, k*}^{T-1}] (Eq. 28)
-        H_c = torch.cat([h_G, h_last], dim=-1)  # (B, 1, 2d)
+        h_k = getattr(environment, "cur_vehicle_hidden", None)
+        if h_k is None:
+            h_k = h_last.new_zeros(h_last.size(0), 1, self.vehicle_repr_size)
+        h_k = self.project_vehicle_hidden(h_k)
+
+        # H_c^T = [\bar{h}_{G,k*}, h_{last,k*}^{T-1}, h_{k*}]
+        H_c = torch.cat([h_G, h_last, h_k], dim=-1)
 
         # 4. Decoder Multi-Head Attention \hat{H}_c^T (Eq. 29)
         hat_H_c = self.decoder_attention(
@@ -134,7 +140,9 @@ class AttentionLearner(nn.Module):
             set_environment(environment)
         try:
             environment.selector = self.selector
-            environment.policy_greedy = True  # Eq. 27 argmax, independent of node sampling
+            environment.policy_greedy = (
+                self.greedy if self.vehicle_greedy is None else self.vehicle_greedy
+            )
             environment.reset()
             self._encode_customers(environment.nodes, environment.cust_mask)
 
@@ -166,9 +174,12 @@ class AttentionLearner(nn.Module):
                 customer_selected_logp = customer_log_probability.gather(
                     1, customer_index
                 )
-                joint_logp = customer_selected_logp
-                if self.include_vehicle_log_probability:
-                    joint_logp = joint_logp + environment.cur_vehicle_logp
+                vehicle_logp = environment.cur_vehicle_logp
+                if vehicle_logp is None:
+                    vehicle_logp = customer_selected_logp.new_zeros(
+                        customer_selected_logp.shape
+                    )
+                step_logp = customer_selected_logp + vehicle_logp
 
                 # Update last visited node for the acting vehicle
                 last_visited_nodes.scatter_(
@@ -178,7 +189,7 @@ class AttentionLearner(nn.Module):
                 actions.append(
                     (environment.cur_veh_idx.clone(), customer_index.clone())
                 )
-                action_log_probabilities.append(joint_logp)
+                action_log_probabilities.append(step_logp)
                 rewards.append(environment.step(customer_index))
 
             return actions, action_log_probabilities, rewards

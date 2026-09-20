@@ -1,15 +1,8 @@
-"""Greedy heuristic baseline for DCVRP.
+"""Greedy heuristic for DCVRP (Section IV-A).
 
-Implements the event-driven nearest-available dispatching rule described in
-Section IV-A of the manuscript:
-"Greedy: Every time a vehicle becomes idle, it is assigned to execute the nearest available task."
-
-Characteristics:
-- Dispatches each idle vehicle to the nearest customer that is currently revealed
-  and within remaining vehicle capacity.
-- Operates under continuous event revelation.
-- Each vehicle performs a single round-trip return to the depot upon exhausting
-  all feasible customer requests.
+Whenever a vehicle becomes idle it is assigned the nearest revealed customer
+that fits in the remaining capacity. Revelation is continuous. Vehicles return
+to the depot when no feasible customer remains.
 """
 
 from __future__ import annotations
@@ -42,28 +35,7 @@ def run_greedy(
     horizon: float = 1.0,
     pending_cost: float = 0.0,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Execute the event-driven nearest-task Greedy baseline strictly conforming to Section IV-A.
-
-    Parameters
-    ----------
-    data : DCVRPDataset
-        Batch of normalized DCVRP instances.
-    reveal : str, optional
-        Revelation model: "continuous" (default, as reported in Table I)
-        or "next_boundary".
-    intervals : int, optional
-        Number of decision intervals (default: 10).
-    horizon : float, optional
-        Normalized operational time horizon (default: 1.0).
-    pending_cost : float, optional
-        Penalty for each unserved customer (default: 0.0 during evaluation).
-
-    Returns
-    -------
-    tuple[torch.Tensor, torch.Tensor]
-        - costs: 1D Tensor of total route distance for each instance.
-        - qos: 1D Tensor of service quality (fraction of customers served) in [0, 1].
-    """
+    """Return route distance and QoS for each instance."""
     nodes_all = data.nodes.detach().cpu()
     vehicle_count = int(data.veh_count)
     capacity = float(data.veh_capa)

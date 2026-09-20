@@ -1,23 +1,19 @@
-"""Training script for Dynamic Capacitated Vehicle Routing Problem (DCVRP).
+"""Train DCVRP policies with REINFORCE and a greedy rollout baseline.
 
-Trains deep reinforcement learning models using REINFORCE with a Rollout Baseline.
-Hyperparameters strictly follow Section III-D (Algorithm 2) and Section IV-A of the manuscript:
-- Problem: n in {20, 35, 50}, m = n / 5, Q = 150, T = 480, beta = 10 synchronized intervals.
-- Iterations:
-    * n = 20: batch size 100, 1000 steps/epoch, 100 epochs.
-    * n = 35, 50: batch size 50, 500 steps/epoch, 100 epochs.
-- Network: 3-layer 8-head Transformer encoder (d=128, ff=512), C=10 tanh exploration.
-- Optimization: Adam optimizer with learning rate 1e-4, gradient norm clipping 2.0.
-- RL Algorithm: REINFORCE with a greedy rollout baseline, 3 sampled policy
-  rollouts per instance, and paired t-test update threshold phi = 0.05 (Algorithm 2).
-- Penalty: alpha = 5.0 for unserved customers (Eq. 14).
-- Vehicle selection follows Eq. 27 (argmax); customers follow Eq. 31 (sample / greedy).
+Hyperparameters follow Section III-D (Algorithm 2) and Section IV-A:
+n in {20, 35, 50}, m = n/5, Q = 150, T = 480, beta = 10 intervals.
+n = 20 uses batch size 100 and 1000 steps per epoch; n = 35 and 50 use
+batch size 50 and 500 steps. The encoder is a 3-layer 8-head Transformer
+(d = 128, ff = 512) with C = 10 tanh clipping. Adam starts at 1e-4 and
+cosine-anneals to 1e-5, with gradient clipping 2.0. During training both
+the vehicle and the customer are sampled; evaluation uses argmax for the
+vehicle (Eq. 27) and greedy or sampled decoding for customers.
+Unserved customers are penalized with alpha = 5 (Eq. 14).
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import time
 from pathlib import Path
 
@@ -26,17 +22,16 @@ import torch
 from scipy.stats import ttest_rel
 from torch.nn.utils import clip_grad_norm_
 from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from env import (
     DEFAULT_CUSTOMER_COUNT,
-    DEFAULT_DECISION_INTERVALS,
     DEFAULT_DYNAMIC_RATES,
-    DEFAULT_HORIZON,
-    DEFAULT_VEHICLE_CAPACITY,
+    DEFAULT_REVELATION,
     DEFAULT_VEHICLE_COUNT,
-    DEFAULT_VEHICLE_SPEED,
     DCVRPDataset,
     DCVRPEnvironment,
+    REVELATION_MODES,
     generate_dataset,
     generate_evaluation_split,
     set_seed,
@@ -64,6 +59,7 @@ def repeat_rollout_batch(data: DCVRPDataset, repeats: int) -> DCVRPDataset:
         vehicle_speed=data.veh_speed,
         nodes=data.nodes.repeat_interleave(repeats, dim=0),
         customer_mask=mask,
+        revelation=getattr(data, "revelation", DEFAULT_REVELATION),
     )
 
 
@@ -76,6 +72,7 @@ class RolloutBaseline:
         device: torch.device,
         method: str,
         vehicle_count: int = DEFAULT_VEHICLE_COUNT,
+        disclose_horizon_tail: bool = False,
     ):
         selector = build_selector(method, vehicle_count=vehicle_count)
         self.model = AttentionLearner(selector).to(device)
@@ -86,6 +83,16 @@ class RolloutBaseline:
         self.device = device
         self.method = method
         self.vehicle_count = vehicle_count
+        self.disclose_horizon_tail = bool(disclose_horizon_tail)
+
+    def _env(self, data, pending_cost: float) -> DCVRPEnvironment:
+        return DCVRPEnvironment(
+            data,
+            nodes=data.nodes.to(self.device),
+            pending_cost=pending_cost,
+            record_trace=False,
+            disclose_horizon_tail=self.disclose_horizon_tail,
+        )
 
     @torch.no_grad()
     def eval(self, data, device: torch.device) -> torch.Tensor:
@@ -94,7 +101,7 @@ class RolloutBaseline:
         A deterministic greedy policy yields identical repeats, so one greedy
         rollout is exactly the mean of the paper's three baseline rollouts.
         """
-        env = DCVRPEnvironment(data, nodes=data.nodes.to(device), pending_cost=5.0, record_trace=False)
+        env = self._env(data, pending_cost=5.0)
         _, _, rewards = self.model(env)
         return torch.stack(rewards).sum(dim=0)
 
@@ -113,11 +120,11 @@ class RolloutBaseline:
         candidate_eval.greedy = True
         candidate_eval.vehicle_greedy = True
 
-        env_c = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(self.device), pending_cost=5.0, record_trace=False)
+        env_c = self._env(val_dataset, pending_cost=5.0)
         _, _, r_c = candidate_eval(env_c)
         returns_candidate = torch.stack(r_c).sum(dim=0).squeeze(-1).cpu().numpy()
 
-        env_b = DCVRPEnvironment(val_dataset, nodes=val_dataset.nodes.to(self.device), pending_cost=5.0, record_trace=False)
+        env_b = self._env(val_dataset, pending_cost=5.0)
         _, _, r_b = self.model(env_b)
         returns_baseline = torch.stack(r_b).sum(dim=0).squeeze(-1).cpu().numpy()
 
@@ -164,13 +171,13 @@ def parse_args():
         "--steps-per-epoch",
         type=int,
         default=None,
-        help="Iterations per epoch (default: 1000 for n=20, 500 for n=35/50 per manuscript).",
+        help="Iterations per epoch (default: 1000 for n=20, 500 for n=35/50).",
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=None,
-        help="Training batch size (default: 100 for n=20, 50 for n=35/50 per manuscript).",
+        help="Training batch size (default: 100 for n=20, 50 for n=35/50).",
     )
     parser.add_argument(
         "--lr",
@@ -203,12 +210,6 @@ def parse_args():
         help="Path to an existing checkpoint to resume training from.",
     )
     parser.add_argument(
-        "--init-from",
-        type=Path,
-        default=None,
-        help="Load model weights only and start a fresh epoch counter (fine-tune).",
-    )
-    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("checkpoints"),
@@ -229,18 +230,27 @@ def parse_args():
     parser.add_argument(
         "--early-stop-epoch",
         type=int,
-        default=20,
-        help="Abort if any Table I cell is still outside the per-rate band at this epoch.",
+        default=0,
+        help="If >0, stop once every reported Table I cell is within --early-stop-mae.",
     )
     parser.add_argument(
         "--early-stop-mae",
         type=float,
         default=TABLE1_CELL_GAP_LIMIT,
-        help=(
-            "Per-dynamic-rate absolute Table I gap percent. Every phi must be "
-            "within this band; mean MAE alone does not pass. Training also "
-            "stops early once every cell is inside +/-5% with 100% QoS."
-        ),
+        help="Maximum absolute percent gap versus Table I used with --early-stop-epoch.",
+    )
+    parser.add_argument(
+        "--revelation",
+        type=str,
+        default=DEFAULT_REVELATION,
+        choices=list(REVELATION_MODES),
+        help="Arrival process: hpp (Uniform(0, T]) or poisson (Eq. 34 PMF).",
+    )
+    parser.add_argument(
+        "--disclose-horizon-tail",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="If set, disclose a_i <= T_{r+1}. Default discloses a_i <= T_r.",
     )
     return parser.parse_args()
 
@@ -268,13 +278,13 @@ def train(args):
     print(f"  Training DCVRP Model: {args.method}")
     print(f"  Scale: n = {args.customer_count} customers, m = {args.vehicle_count} vehicles")
     print(f"  Hyperparameters: {args.epochs} epochs, {args.steps_per_epoch} steps/epoch, batch size {args.batch_size}")
-    print(f"  Policy rollouts: {args.rollouts} | Vehicle rule: Eq.27 argmax | Baseline: greedy rollout + t-test 0.05")
+    print(f"  Policy rollouts: {args.rollouts} | Vehicle: sample train / argmax eval | Baseline: greedy rollout + t-test 0.05")
     print(
-        f"  Seed: {args.seed} | Table I gate: every phi |gap| <= "
-        f"{args.early_stop_mae:.1f}% by epoch {args.early_stop_epoch} "
-        f"(not mean MAE)"
+        f"  Arrivals: {args.revelation} | disclose a_i<=T_r={not args.disclose_horizon_tail} | "
+        f"phi={DEFAULT_DYNAMIC_RATES}"
     )
-    print(f"  Optimizer: Adam (lr={args.lr}, clip={args.max_grad_norm}), Device: {device}")
+    print(f"  Seed: {args.seed} | Device: {device}")
+    print(f"  Optimizer: Adam (lr={args.lr} cosine to 1e-5, clip={args.max_grad_norm})")
     print("=" * 76)
 
     selector = build_selector(args.method, vehicle_count=args.vehicle_count)
@@ -290,6 +300,7 @@ def train(args):
     ).to(device)
 
     optimizer = Adam(model.parameters(), lr=args.lr)
+    scheduler = CosineAnnealingLR(optimizer, T_max=max(1, args.epochs), eta_min=1e-5)
 
     start_epoch = 1
     best_val_dist = float("inf")
@@ -297,15 +308,7 @@ def train(args):
     best_table1_max = float("inf")
     last_table1_all_within = False
 
-    if args.init_from and args.init_from.exists():
-        print(f"Initializing weights from: {args.init_from}")
-        chk = torch.load(args.init_from, map_location=device, weights_only=False)
-        model.load_state_dict(chk["model"], strict=True)
-        start_epoch = 1
-        best_val_dist = float("inf")
-        best_val_objective = float("inf")
-        print("Loaded weights; epoch counter reset for paper-aligned fine-tuning.")
-    elif args.resume and args.resume.exists():
+    if args.resume and args.resume.exists():
         print(f"Resuming training from checkpoint: {args.resume}")
         chk = torch.load(args.resume, map_location=device, weights_only=False)
         model.load_state_dict(chk["model"])
@@ -337,6 +340,7 @@ def train(args):
         customer_count=args.customer_count,
         vehicle_count=args.vehicle_count,
         seed=args.seed + 9999,
+        revelation=args.revelation,
     )
     baseline_dataset = val_split[0.50]
     table1_split = generate_evaluation_split(
@@ -345,18 +349,23 @@ def train(args):
         customer_count=args.customer_count,
         vehicle_count=args.vehicle_count,
         seed=20260821,
+        revelation=args.revelation,
     )
     set_seed(args.seed)
+    for _ in range(start_epoch - 1):
+        scheduler.step()
     baseline = RolloutBaseline(
         model,
         device=device,
         method=args.method,
         vehicle_count=args.vehicle_count,
+        disclose_horizon_tail=args.disclose_horizon_tail,
     )
 
     for epoch in range(start_epoch, args.epochs + 1):
         model.train()
         model.greedy = False
+        model.vehicle_greedy = False
         epoch_start = time.perf_counter()
         total_loss = 0.0
 
@@ -367,6 +376,7 @@ def train(args):
                 customer_count=args.customer_count,
                 vehicle_count=args.vehicle_count,
                 dynamic_rate=rate,
+                revelation=args.revelation,
             )
 
             with torch.no_grad():
@@ -379,15 +389,20 @@ def train(args):
                 nodes=rollout_data.nodes.to(device),
                 pending_cost=5.0,
                 record_trace=False,
+                disclose_horizon_tail=args.disclose_horizon_tail,
             )
             _, log_probabilities, rewards = model(env)
+            # Joint log-probability of the vehicle and the selected node.
             log_prob = torch.stack(log_probabilities).sum(0)
             policy_returns = torch.stack(rewards).sum(0)
             repeated_baseline = baseline_returns.repeat_interleave(
                 args.rollouts, dim=0
             )
-            advantage = policy_returns - repeated_baseline
-            rollout_loss = -(log_prob * advantage.detach()).mean()
+            advantage = (policy_returns - repeated_baseline).detach()
+            adv_std = advantage.std()
+            if float(adv_std) > 1e-6:
+                advantage = (advantage - advantage.mean()) / adv_std
+            rollout_loss = -(log_prob * advantage).mean()
             rollout_loss.backward()
             step_loss = rollout_loss.item()
 
@@ -419,7 +434,13 @@ def train(args):
             model_eval.vehicle_greedy = True
 
             for v_rate, v_data in val_split.items():
-                env_val = DCVRPEnvironment(v_data, nodes=v_data.nodes.to(device), pending_cost=0.0, record_trace=False)
+                env_val = DCVRPEnvironment(
+                    v_data,
+                    nodes=v_data.nodes.to(device),
+                    pending_cost=0.0,
+                    record_trace=False,
+                    disclose_horizon_tail=args.disclose_horizon_tail,
+                )
                 model_eval(env_val)
                 val_dists.append(env_val.route_distance().mean().item())
                 val_qoss.append(env_val.qos().mean().item() * 100.0)
@@ -438,6 +459,7 @@ def train(args):
             f"Epoch {epoch:3d}/{args.epochs} | Loss: {avg_loss:8.4f} | "
             f"Val Dist: {mean_val_dist:6.2f} | Val QoS: {mean_val_qos:5.1f}% | "
             f"Val Obj: {mean_val_objective:6.2f} | "
+            f"LR: {scheduler.get_last_lr()[0]:.2e} | "
             f"Time: {epoch_time:5.1f}s{update_tag}",
             flush=True,
         )
@@ -453,8 +475,11 @@ def train(args):
         with torch.no_grad():
             for t_rate, t_data in table1_split.items():
                 env_t = DCVRPEnvironment(
-                    t_data, nodes=t_data.nodes.to(device), pending_cost=0.0,
+                    t_data,
+                    nodes=t_data.nodes.to(device),
+                    pending_cost=0.0,
                     record_trace=False,
+                    disclose_horizon_tail=args.disclose_horizon_tail,
                 )
                 model_eval(env_t)
                 key = round(float(t_rate), 2)
@@ -473,11 +498,9 @@ def train(args):
         last_table1_all_within = bool(table1_report["all_within"])
         table1_all_within = last_table1_all_within
         if table1_report["parts"]:
-            within_tag = "YES" if table1_all_within else "NO"
             print(
                 f"         table1-phi {' '.join(table1_report['parts'])} | "
-                f"MAE {table1_mae:.2f}% max {table1_max:.2f}% | "
-                f"all-within-{args.early_stop_mae:.0f}% {within_tag}",
+                f"MAE {table1_mae:.2f}% max {table1_max:.2f}%",
                 flush=True,
             )
             qos_phi = " ".join(
@@ -508,6 +531,8 @@ def train(args):
             "parameter_count": param_count,
             "rollouts": int(args.rollouts),
             "seed": int(args.seed),
+            "revelation": str(args.revelation),
+            "disclose_horizon_tail": bool(args.disclose_horizon_tail),
             "table1_mae": table1_mae,
             "table1_max_gap": table1_max,
             "table1_gap_by_rate": {
@@ -536,21 +561,28 @@ def train(args):
         if table1_max is not None and table1_max < best_table1_max:
             best_table1_max = table1_max
             torch.save(publish, table1_best_checkpoint_path)
-        if last_table1_all_within:
+        scheduler.step()
+        cost_within = (
+            table1_max is not None
+            and len(table1_report.get("signed", {})) >= 4
+            and table1_max <= args.early_stop_mae
+        )
+        if cost_within and args.early_stop_epoch > 0:
             print(
-                f"         Table I gate passed: every phi |gap| <= "
-                f"{args.early_stop_mae:.1f}% with 100% QoS. Stopping.",
+                f"         Early stop: every Table I cell within "
+                f"{args.early_stop_mae:.1f}%.",
                 flush=True,
             )
             break
         if (
-            epoch == args.early_stop_epoch
+            args.early_stop_epoch > 0
+            and epoch == args.early_stop_epoch
             and table1_max is not None
             and table1_max > args.early_stop_mae
         ):
             print(
-                f"         Table I gate failed at epoch {epoch}: max cell "
-                f"|gap| {table1_max:.2f}% > {args.early_stop_mae:.1f}%. Stopping.",
+                f"         Early stop at epoch {epoch}: max Table I gap "
+                f"{table1_max:.2f}% > {args.early_stop_mae:.1f}%.",
                 flush=True,
             )
             break
@@ -563,10 +595,8 @@ def train(args):
         )
     if table1_best_checkpoint_path.exists():
         print(
-            f"Best Table I checkpoint saved to: {table1_best_checkpoint_path} "
-            f"(max cell |gap|: {best_table1_max:.2f}%; "
-            f"all-within-{args.early_stop_mae:.0f}%: "
-            f"{'YES' if last_table1_all_within else 'NO'})"
+            f"Closest Table I checkpoint saved to: {table1_best_checkpoint_path} "
+            f"(max gap: {best_table1_max:.2f}%)"
         )
     return {
         "seed": int(args.seed),

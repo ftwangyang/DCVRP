@@ -21,6 +21,8 @@ class BaseSelector(nn.Module):
         super().__init__()
         self.vehicle_count = vehicle_count
         self.evaluation_rule = evaluation_rule
+        self.representation_size = 64
+        self.last_hidden: torch.Tensor | None = None
 
     def scores(
         self,
@@ -44,12 +46,18 @@ class BaseSelector(nn.Module):
         safe_done[all_done, 0] = False
         logits = self.scores(vehicles, customers, safe_done, customer_mask)
         logits = logits.masked_fill(safe_done, -torch.inf)
-        del greedy
-        # Eq. 27: k* = argmax_k l_k in both training and evaluation.
-        # Customer selection (Eq. 31) remains the stochastic policy. Vehicle
-        # log-probabilities are still returned so REINFORCE can credit the
-        # selected vehicle without replacing argmax by sampling.
-        index = logits.argmax(dim=1)
+        if greedy:
+            index = logits.argmax(dim=1)
+        else:
+            index = Categorical(logits=logits).sample()
+        hidden = self.last_hidden
+        if hidden is None:
+            hidden = vehicles.new_zeros(
+                vehicles.size(0), self.vehicle_count, self.representation_size
+            )
+        self.last_selected_hidden = hidden.gather(
+            1, index.view(-1, 1, 1).expand(-1, 1, hidden.size(-1))
+        )
         log_probability = logits.log_softmax(dim=1).gather(1, index.unsqueeze(1))
         return index.unsqueeze(1), logits, log_probability
 
@@ -72,6 +80,8 @@ class IndependentSelector(BaseSelector):
         evaluation_rule: str = "argmax",
     ):
         super().__init__(vehicle_count, evaluation_rule)
+        self.model_size = model_size
+        self.representation_size = model_size
         self.vehicle_networks = nn.ModuleList([
             VehicleSelectionNetwork(
                 vehicle_state_size, customer_feature_size, model_size, head_count
@@ -117,10 +127,11 @@ class IndependentSelector(BaseSelector):
                 strict=True,
             )
 
-        values = vmap(evaluate_one, in_dims=(0, 0, 0))(
+        scores, hiddens = vmap(evaluate_one, in_dims=(0, 0, 0))(
             stacked_parameters, own_states, per_vehicle_customer_masks
         )
-        return values.squeeze(2).transpose(0, 1)
+        self.last_hidden = hiddens.squeeze(2).transpose(0, 1)
+        return scores.squeeze(2).transpose(0, 1)
 
 
 class CentralizedSelector(BaseSelector):
@@ -134,6 +145,8 @@ class CentralizedSelector(BaseSelector):
         evaluation_rule: str = "argmax",
     ):
         super().__init__(vehicle_count, evaluation_rule)
+        self.hidden_size = hidden_size
+        self.representation_size = hidden_size
         self.vehicle_encoder = nn.Sequential(
             nn.Linear(vehicle_state_size, hidden_size),
             nn.ReLU(),
@@ -144,11 +157,11 @@ class CentralizedSelector(BaseSelector):
             nn.ReLU(),
             nn.Linear(hidden_size, hidden_size),
         )
-        self.decision = nn.Sequential(
+        self.decision_hidden = nn.Sequential(
             nn.Linear(hidden_size * 3, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, 1),
         )
+        self.decision_out = nn.Linear(hidden_size, 1)
 
     def scores(
         self,
@@ -185,7 +198,8 @@ class CentralizedSelector(BaseSelector):
             ],
             dim=2,
         )
-        return self.decision(context).squeeze(2)
+        self.last_hidden = self.decision_hidden(context)
+        return self.decision_out(self.last_hidden).squeeze(2)
 
 
 class LiDRLTourHistorySelector(BaseSelector):

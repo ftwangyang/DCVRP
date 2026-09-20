@@ -145,24 +145,31 @@ class MultiHeadAttention(nn.Module):
 
 
 class TransformerEncoderLayer(nn.Module):
-    """Single layer of Transformer encoder with BatchNorm and feed-forward."""
+    """Paper Eqs. 18-19: MHA and FF with residual BatchNorm.
+
+    Unrevealed nodes are zeroed (Eq. 17) before and after each layer.
+    """
 
     def __init__(self, head_count: int, model_size: int, ff_size: int):
         super().__init__()
         self.mha = MultiHeadAttention(head_count, model_size)
-        self.bn1 = nn.BatchNorm1d(model_size)
+        self.norm1 = nn.BatchNorm1d(model_size)
         self.ff1 = nn.Linear(model_size, ff_size)
         self.ff2 = nn.Linear(ff_size, model_size)
-        self.bn2 = nn.BatchNorm1d(model_size)
+        self.norm2 = nn.BatchNorm1d(model_size)
+
+    def _bn(self, norm: nn.BatchNorm1d, h: torch.Tensor, mask=None) -> torch.Tensor:
+        out = norm(h.transpose(1, 2)).transpose(1, 2)
+        if mask is not None:
+            out = out.masked_fill(mask.unsqueeze(-1), 0)
+        return out
 
     def forward(self, h_in, mask=None):
         att = self.mha(h_in, mask=mask)
-        att = self.bn1((h_in + att).permute(0, 2, 1)).permute(0, 2, 1)
+        att = self._bn(self.norm1, h_in + att, mask)
         h_out = F.relu(self.ff1(att))
         h_out = self.ff2(h_out)
-        h_out = self.bn2((att + h_out).permute(0, 2, 1)).permute(0, 2, 1)
-        if mask is not None:
-            h_out[mask] = 0
+        h_out = self._bn(self.norm2, att + h_out, mask)
         return h_out
 
 
@@ -217,5 +224,6 @@ class VehicleSelectionNetwork(nn.Module):
             my_emb, cust_emb, cust_emb, mask=cust_mask.unsqueeze(1)
         )
         combined = torch.cat([my_emb, fleet_ctx, cust_ctx], dim=2)
-        h = F.relu(self.decision_layer1(combined))
-        return self.decision_layer2(h).squeeze(2)
+        hidden = F.relu(self.decision_layer1(combined))
+        score = self.decision_layer2(hidden).squeeze(2)
+        return score, hidden

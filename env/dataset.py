@@ -1,17 +1,17 @@
-"""Synthetic DCVRP instances following Section IV-A, with homogeneous Poisson arrivals.
+"""Synthetic DCVRP instances (Section IV-A).
 
-- Coordinates: continuous uniform in the [0, 1] unit square.
-- Traveling speed: 1; after dividing times by T=480 the normalized speed is 480.
+- Coordinates: uniform in the unit square.
+- Travel speed: 1; after dividing times by T=480 the normalized speed is 480.
 - Demands: integers in [5, 41], divided by Q=150.
 - Service times: integers in [10, 31] minutes, divided by T.
-- Dynamism: exact n'=round(n phi) nested customers (Eq. 10).
-- Revelation: homogeneous Poisson process. Conditioned on a fixed dynamic
-  count, arrival times are i.i.d. Uniform(0, T]. Independent Poisson(240.5)
-  draws clump around interval 5 and turn phi=75% into a second static VRP.
+- Dynamism: exactly n' = round(n φ) nested dynamic customers (Eq. 10).
+- Default arrivals: truncated Poisson PMF on {1, ..., T} (Eq. 34).
+- Optional `--revelation hpp`: homogeneous Poisson process, a_i ~ Uniform(0, T].
 """
 
 from __future__ import annotations
 
+import math
 import random
 from typing import Sequence
 
@@ -26,6 +26,10 @@ DEFAULT_VEHICLE_SPEED = 1.0
 DEFAULT_HORIZON = 480.0
 DEFAULT_DECISION_INTERVALS = 10
 DEFAULT_DYNAMIC_RATES = (0.10, 0.25, 0.50, 0.75)
+REVELATION_POISSON = "poisson"
+REVELATION_HPP = "hpp"
+DEFAULT_REVELATION = REVELATION_POISSON
+REVELATION_MODES = (REVELATION_POISSON, REVELATION_HPP)
 
 
 def set_seed(seed: int) -> None:
@@ -47,6 +51,7 @@ class DCVRPDataset(Dataset):
         nodes,
         customer_mask=None,
         location_scale: float | None = None,
+        revelation: str = DEFAULT_REVELATION,
     ):
         self.veh_count = vehicle_count
         self.veh_capa = vehicle_capacity
@@ -54,6 +59,7 @@ class DCVRPDataset(Dataset):
         self.nodes = nodes
         self.cust_mask = customer_mask
         self.location_scale = 1.0 if location_scale is None else float(location_scale)
+        self.revelation = str(revelation)
         self.batch_size, self.nodes_count, _ = nodes.size()
 
     def __len__(self):
@@ -65,13 +71,35 @@ class DCVRPDataset(Dataset):
         return self.nodes[index], self.cust_mask[index]
 
 
-def _base_draws(batch_size: int, customer_count: int, horizon: float):
+def _validate_revelation(revelation: str) -> str:
+    mode = str(revelation).strip().lower()
+    if mode not in REVELATION_MODES:
+        raise ValueError(f"Unknown revelation mode: {revelation}")
+    return mode
+
+
+def _base_draws(
+    batch_size: int,
+    customer_count: int,
+    horizon: float,
+    revelation: str,
+):
     coordinates = torch.rand(batch_size, customer_count + 1, 2)
     demands = torch.randint(5, 42, (batch_size, customer_count, 1)).float()
     service = torch.randint(10, 32, (batch_size, customer_count, 1)).float()
-    # Homogeneous Poisson process on (0, T]: given N=n', times ~ Uniform(0, T].
-    # torch.rand is [0, 1), so (1-u)*T is (0, T].
-    disclosure = (1.0 - torch.rand(batch_size, customer_count, 1)) * float(horizon)
+    if revelation == REVELATION_POISSON:
+        # Eq. 34: P(a_i = t) ∝ λ^t e^{-λ} / t! on {1, ..., T}.
+        horizon_int = int(horizon)
+        lam = (1.0 + float(horizon)) / 2.0
+        times = torch.arange(1, horizon_int + 1, dtype=torch.float32)
+        log_unnorm = times.mul(math.log(lam)).sub_(lam).sub_(torch.lgamma(times + 1.0))
+        index = torch.distributions.Categorical(logits=log_unnorm).sample(
+            (batch_size, customer_count)
+        )
+        disclosure = (index + 1).unsqueeze(-1).float()
+    else:
+        # Homogeneous Poisson process: a_i ~ Uniform(0, T].
+        disclosure = (1.0 - torch.rand(batch_size, customer_count, 1)) * float(horizon)
     order = torch.argsort(torch.rand(batch_size, customer_count), dim=1)
     ranks = torch.empty_like(order)
     ranks.scatter_(
@@ -91,6 +119,7 @@ def _pack(
     vehicle_capacity,
     vehicle_speed,
     horizon,
+    revelation,
 ):
     customers = torch.cat(
         [
@@ -109,6 +138,7 @@ def _pack(
         float(vehicle_speed) * float(horizon),
         torch.cat([depot, customers], dim=1),
         location_scale=1.0,
+        revelation=revelation,
     )
 
 
@@ -121,11 +151,13 @@ def generate_dataset(
     vehicle_speed: float = DEFAULT_VEHICLE_SPEED,
     horizon: float = DEFAULT_HORIZON,
     seed: int | None = None,
+    revelation: str = DEFAULT_REVELATION,
 ) -> DCVRPDataset:
     if seed is not None:
         set_seed(seed)
+    revelation = _validate_revelation(revelation)
     coordinates, demands, service, disclosure, ranks = _base_draws(
-        batch_size, customer_count, horizon
+        batch_size, customer_count, horizon, revelation
     )
     dynamic_count = int(round(customer_count * float(dynamic_rate)))
     release = torch.where(
@@ -142,6 +174,7 @@ def generate_dataset(
         vehicle_capacity,
         vehicle_speed,
         horizon,
+        revelation,
     )
 
 
@@ -154,11 +187,13 @@ def generate_evaluation_split(
     vehicle_speed: float = DEFAULT_VEHICLE_SPEED,
     horizon: float = DEFAULT_HORIZON,
     seed: int = 20260821,
+    revelation: str = DEFAULT_REVELATION,
 ) -> dict[float, DCVRPDataset]:
     """Shared instances; larger phi adds the same nested dynamic set."""
     set_seed(seed)
+    revelation = _validate_revelation(revelation)
     coordinates, demands, service, disclosure, ranks = _base_draws(
-        instances, customer_count, horizon
+        instances, customer_count, horizon, revelation
     )
     split = {}
     for rate in sorted(float(value) for value in dynamic_rates):
@@ -177,5 +212,6 @@ def generate_evaluation_split(
             vehicle_capacity,
             vehicle_speed,
             horizon,
+            revelation,
         )
     return split

@@ -1,39 +1,17 @@
-"""Time-driven DCVRP environment (10 equal intervals over T = 480).
+"""Time-driven DCVRP environment (Algorithm 1).
 
-Each interval is one static VRP on the customers already visible at its
-start. A vehicle may only dispatch a customer if its planning clock is
-still before T_{r+1}; in-progress work that started before the boundary is
-kept (Algorithm 1). Planning the rest of the horizon and cutting the
-suffix leaks lookahead and underprices high dynamism.
+The horizon T is partitioned into ten equal intervals. Each interval is a
+static VRP. At the start of interval r the controller observes customers
+with appearance time a_i <= T_r (the last interval uses T) and builds a
+route plan. At T_{r+1}:
 
-- Keep: service already finished, or already started / in progress.
-  The vehicle is placed at that customer (requirement doc P20 / P51).
-- Destroy: planned start after T_i. Those customers return to the pool.
-- Reveal: customers with disclosure time <= T_i become visible.
-  Entering the last interval also discloses remaining (T_9, T] arrivals;
-  otherwise a homogeneous Poisson process permanently hides ~phi/10 of
-  customers and QoS cannot reach Table I's 100%. Constraint (8) still
-  waits until a_i and refuses starts after T.
+- keep work whose service has already started (D_start < T_{r+1});
+- discard the unstarted suffix;
+- idle vehicles wait until the next decision epoch;
+- vehicles still in service cannot start a new task before they finish.
 
-Capacity is never refilled. Each interval plan includes at most one depot
-return per vehicle. Mid-interval depot is a real trip only when no hidden
-customers remain; otherwise it ends planning in place so Algorithm 1 cannot
-commit an instant speed-480 return. A committed leg is represented by its
-destination and its actual availability time, which may be later than the
-interval boundary.
-
-When more than half the customers start unrevealed, a vehicle may not take
-a request that would drop its leftover capacity below one max-size demand
-if another feasible vehicle can keep that slack. Without that no-refill
-coupling, phi=75% fills two or three vehicles early; the last interval then
-drops late HPP arrivals that were static at phi=50%, so the 50-to-75
-distance jump stays too small.
-
-On those same high-dynamism instances, the first depot action while hidden
-customers remain is a real return (Algorithm 1 keeps it: start < T_i). Later
-interval terminators stay in the field so speed 480 cannot commit a round
-trip every interval. REINFORCE otherwise learns cheaper in-field chaining
-and the 50-to-75 increment collapses below Table I.
+Each vehicle performs a single round trip in an interval: returning to the
+depot ends that tour. A request counts as served if service starts by T.
 """
 
 from __future__ import annotations
@@ -41,10 +19,6 @@ from __future__ import annotations
 import torch
 
 from .dataset import DCVRPDataset
-
-# Section IV-A demand support is {5, ..., 41} against Q=150. Leftover
-# capacity below one max-size request cannot accept a future arrival.
-_MAX_DEMAND_RESERVE = 41.0 / 150.0
 
 
 class DCVRPEnvironment:
@@ -61,6 +35,7 @@ class DCVRPEnvironment:
         segment_count: int = 10,
         horizon: float = 1.0,
         record_trace: bool = True,
+        disclose_horizon_tail: bool = False,
     ):
         self.veh_count = data.veh_count
         self.veh_capa = data.veh_capa
@@ -71,6 +46,7 @@ class DCVRPEnvironment:
         self.device = self.nodes.device
         self.horizon = float(horizon)
         self.record_trace = record_trace
+        self.disclose_horizon_tail = bool(disclose_horizon_tail)
         self.segment_count = int(segment_count)
         self.segment_duration = self.horizon / self.segment_count
         self.current_segment = 0
@@ -103,16 +79,19 @@ class DCVRPEnvironment:
             (B, V), dtype=torch.bool, device=self.device
         )
         self.done = False
-        self.cust_mask = self.nodes[:, :, 4] > 0
-        self._init_hidden = self.cust_mask[:, 1:].sum(dim=1)
-        self.total_cust_mask = (
-            self.cust_mask[:, None, :].expand(-1, V, -1).clone()
-        )
         self.served = torch.zeros(
             (B, self.nodes_count), dtype=torch.bool, device=self.device
         )
-        self.pending_customers = (~self.served).float().sum(-1, keepdim=True) - 1
         self.current_segment = 0
+        self.cust_mask = torch.ones(
+            (B, self.nodes_count), dtype=torch.bool, device=self.device
+        )
+        self.cust_mask[:, 0] = False
+        self.total_cust_mask = (
+            self.cust_mask[:, None, :].expand(-1, V, -1).clone()
+        )
+        self._sync_visibility()
+        self.pending_customers = (~self.served).float().sum(-1, keepdim=True) - 1
         self.new_customers = False
         self.interval_advanced = False
         self.total_distance = self.nodes.new_zeros(B)
@@ -130,10 +109,35 @@ class DCVRPEnvironment:
         self._interval_assigned = torch.zeros(
             (B, V), dtype=torch.bool, device=self.device
         )
-        self._paid_mid_depot = torch.zeros((B, V), dtype=torch.bool, device=self.device)
+        self._finish_time = self.nodes.new_full(
+            (B, self.nodes_count), float("inf")
+        )
+        self._finish_time[:, 0] = 0.0
+        self._start_time = self.nodes.new_full(
+            (B, self.nodes_count), float("inf")
+        )
+        self._start_time[:, 0] = 0.0
         self.interval_logs: list[dict] = []
+        self._construct_steps = 0
         self._rebuild_mask()
         self._update_cur_veh()
+
+    def _visibility_cutoff_for_segment(self, segment: int) -> float:
+        """Cutoff for interval r: a_i <= T_r, except the last interval uses T."""
+        if self.disclose_horizon_tail or segment >= self.segment_count - 1:
+            return min(self.horizon, (segment + 1) * self.segment_duration)
+        return segment * self.segment_duration
+
+    def _visibility_cutoff(self) -> float:
+        return self._visibility_cutoff_for_segment(self.current_segment)
+
+    def _sync_visibility(self) -> None:
+        cutoff = self._visibility_cutoff()
+        reveal = (self.nodes[:, :, 4] <= cutoff) & (~self.served)
+        self.cust_mask = self.cust_mask & ~reveal
+        reveal_expanded = reveal[:, None, :].expand(-1, self.veh_count, -1)
+        self.total_cust_mask = self.total_cust_mask & ~reveal_expanded
+        self.new_customers = bool(reveal.any())
 
     def _reset_residuals(self) -> None:
         B, V = self.minibatch_size, self.veh_count
@@ -169,72 +173,37 @@ class DCVRPEnvironment:
         )
         arrival_time = planning[:, :, None, 3] + dist_to_customer / self.veh_speed
         service_start = torch.maximum(arrival_time, self.nodes[:, None, :, 4])
-        # Constraint (8): service must start before horizon T.
+        # Constraint (8): service must start by T. Stops that would begin
+        # after the next interval boundary are still planned; Algorithm 1
+        # discards any that have not started when the boundary is reached.
         time_mask = service_start > (self.horizon + 1e-6)
-        # Routes are for the current interval. A vehicle whose clock has
-        # already reached T_{r+1} cannot dispatch another customer; those
-        # requests wait for the next interval. Planning past T_{r+1} and
-        # then destroying the suffix leaks leftover-horizon lookahead and
-        # makes high dynamism too cheap relative to Table I.
-        last_interval = self.current_segment >= self.segment_count - 1
-        interval_end = self.horizon if last_interval else (
-            self.current_segment + 1
-        ) * self.segment_duration
-        cannot_depart = planning[:, :, 3] >= (interval_end - 1e-6)
-        time_mask = time_mask | cannot_depart[:, :, None]
         time_mask[:, :, 0] = False
         self.mask = self.mask | time_mask
 
-        # Static VRP per interval: depot stays closed while a feasible customer
-        # remains. Opening it after the first stop lets a speed-480 return
-        # start before T_i and become a committed round trip every interval.
-        # veh_done already blocks a second depot trip in the same interval.
+        # Close the depot while this vehicle still has a feasible customer.
+        # A depot visit ends the interval tour; leftover demand waits until
+        # the next decision epoch rather than starting a second loaded trip.
         has_feasible_customer = (~self.mask[:, :, 1:]).any(dim=2)
         self.mask[:, :, 0] = has_feasible_customer
-        self._apply_high_dynamism_capacity_reserve()
-
-    def _apply_high_dynamism_capacity_reserve(self):
-        """Keep a max-size slack on high-dynamism instances (no refill).
-
-        Nested Table I splits add the last five customers only at phi=75%.
-        Those arrivals are often last-window HPP requests. If earlier
-        intervals have already packed three vehicles below 41/Q leftover,
-        only one vehicle can accept them, Constraint (8) then drops them,
-        and the 75% tour is shorter than the 50% tour that served the same
-        customers as static demand. The rule is instance-side: it fires when
-        more than half the customers start hidden, not as a Table I switch.
-        """
-        init_hidden = getattr(self, "_init_hidden", None)
-        if init_hidden is None:
-            return
-        high = init_hidden > (self.nodes_count - 1) / 2.0
-        if not bool(high.any()):
-            return
-        feasible = ~self.mask[:, :, 1:]
-        if not bool(feasible.any()):
-            return
-        cap = self._planning_vehicles()[:, :, 2]
-        demand = self.nodes[:, 1:, 2]
-        leftover = cap[:, :, None] - demand[:, None, :]
-        leftover_if_feasible = torch.where(
-            feasible, leftover, leftover.new_full(leftover.shape, -1.0e9)
-        )
-        best_leftover = leftover_if_feasible.amax(dim=1, keepdim=True)
-        drops = (
-            feasible
-            & (leftover < _MAX_DEMAND_RESERVE)
-            & (best_leftover >= _MAX_DEMAND_RESERVE)
-            & (leftover < best_leftover - 1e-12)
-            & high[:, None, None]
-        )
-        self.mask[:, :, 1:] = self.mask[:, :, 1:] | drops
-        self.mask[:, :, 0] = (~self.mask[:, :, 1:]).any(dim=2)
 
     def _update_mask_after_action(self, cust_idx: torch.Tensor):
         new_served = self.served.clone()
         new_served.scatter_(1, cust_idx, cust_idx > 0)
         self.served = new_served
         assigned = (cust_idx > 0).squeeze(-1)
+        batch = torch.arange(self.minibatch_size, device=self.device)
+        customer = cust_idx.squeeze(-1)
+        finish = self.cur_veh[:, 0, 3]
+        service = self.nodes[batch, customer, 3]
+        start = finish - service
+        self._finish_time = self._finish_time.clone()
+        self._start_time = self._start_time.clone()
+        self._finish_time[batch, customer] = torch.where(
+            assigned, finish, self._finish_time[batch, customer]
+        )
+        self._start_time[batch, customer] = torch.where(
+            assigned, start, self._start_time[batch, customer]
+        )
         self._interval_assigned = self._interval_assigned.clone()
         self._interval_assigned.scatter_(
             1, self.cur_veh_idx, assigned.unsqueeze(-1) | self._interval_assigned.gather(1, self.cur_veh_idx)
@@ -256,8 +225,6 @@ class DCVRPEnvironment:
         )
         travel_time = dist / self.veh_speed
         arrival_time = self.cur_veh[:, :, 3] + travel_time
-        # Constraint (8) already waits until a_i in the mask. The clock must
-        # do the same, or last-interval HPP customers are served before they appear.
         service_start = torch.maximum(arrival_time, dest[:, :, 4])
         departure_time = service_start + dest[:, :, 3]
 
@@ -290,11 +257,30 @@ class DCVRPEnvironment:
         self.returned_to_depot = self.returned_to_depot.clone().scatter_(
             1, self.cur_veh_idx, is_depot
         )
-        self.veh_done = self.veh_done.clone().scatter_(
-            1, self.cur_veh_idx, is_depot
-        )
+        # Returning to the depot finishes this interval's tour.
+
+    def _refill_depot_capacity(self, cust_idx: torch.Tensor) -> None:
+        """Restore Q when the acting vehicle reaches the depot."""
+        is_depot = (cust_idx == 0).squeeze(-1)
+        if not bool(is_depot.any()):
+            return
+        batch = torch.arange(self.minibatch_size, device=self.device)
+        vehicle = self.cur_veh_idx.squeeze(-1)
+        capa = self.vehicles.new_full((self.minibatch_size,), float(self.veh_capa))
+        cap = self.vehicles[:, :, 2].clone()
+        cap[batch, vehicle] = torch.where(is_depot, capa, cap[batch, vehicle])
+        self.vehicles = self.vehicles.clone()
+        self.vehicles[:, :, 2] = cap
+        self.cur_veh = self.cur_veh.clone()
+        self.cur_veh[:, 0, 2] = torch.where(is_depot, capa, self.cur_veh[:, 0, 2])
+
+    def _sync_vehicle_completion(self) -> None:
+        feasible_customer = (~self.mask[:, :, 1:]).any(dim=2)
+        self.veh_done = self.returned_to_depot.clone()
         if self.current_segment >= self.segment_count - 1:
-            self.done = self.veh_done.all(dim=1).all().item()
+            self.done = bool(self.veh_done.all().item()) and not bool(
+                feasible_customer.any().item()
+            )
 
     def _update_cur_veh(self):
         if self.selector is None:
@@ -317,6 +303,16 @@ class DCVRPEnvironment:
         self.cur_veh_idx = index
         self.cur_vehicle_scores = scores
         self.cur_vehicle_logp = log_probability
+        hidden = getattr(self.selector, "last_hidden", None)
+        if hidden is None:
+            hidden = self.vehicles.new_zeros(
+                self.minibatch_size,
+                self.veh_count,
+                int(getattr(self.selector, "representation_size", 64)),
+            )
+        self.cur_vehicle_hidden = hidden.gather(
+            1, index[:, :, None].expand(-1, -1, hidden.size(-1))
+        )
         index_state = index[:, :, None].expand(-1, -1, self.VEH_STATE_SIZE)
         self.cur_veh = self.vehicles.gather(1, index_state)
         index_nodes = index[:, :, None].expand(-1, -1, self.nodes_count)
@@ -410,7 +406,16 @@ class DCVRPEnvironment:
         valid_removed = not_started & (customers > 0)
         removal_counts = torch.zeros_like(self.served, dtype=torch.int32)
         removal_counts.scatter_add_(1, customers, valid_removed.to(torch.int32))
-        self.served = self.served & (removal_counts == 0)
+        removed = removal_counts > 0
+        self.served = self.served & ~removed
+        self._finish_time = torch.where(
+            removed, self._finish_time.new_full(self._finish_time.shape, float("inf")), self._finish_time
+        )
+        self._start_time = torch.where(
+            removed, self._start_time.new_full(self._start_time.shape, float("inf")), self._start_time
+        )
+        self._finish_time[:, 0] = 0.0
+        self._start_time[:, 0] = 0.0
 
         dest_xy = states[:, :, :2]
         event_cap = states[:, :, 2]
@@ -538,8 +543,9 @@ class DCVRPEnvironment:
         self._segment_vehicle_snapshot = self.vehicles.detach().clone()
 
     def _planning_complete(self) -> bool:
-        """True when every vehicle has finished interval route construction."""
-        return bool(self.returned_to_depot.all().item())
+        """True when the interval static VRP is fully constructed."""
+        no_work = not bool((~self.mask[:, :, 1:]).any().item())
+        return no_work and bool(self.returned_to_depot.all().item())
 
     def _check_segment_transition(self):
         if self.current_segment >= self.segment_count - 1:
@@ -573,7 +579,8 @@ class DCVRPEnvironment:
                 else:
                     destroyed.append(cid)
         visible_before = (~self.cust_mask[0]).clone()
-        reveal = (self.nodes[0, :, 4] <= float(boundary)) & (~self.served[0])
+        next_cutoff = self._visibility_cutoff_for_segment(self.current_segment + 1)
+        reveal = (self.nodes[0, :, 4] <= float(next_cutoff)) & (~self.served[0])
         newly = reveal & self.cust_mask[0]
         events = []
         for i in range(len(self._event_customer)):
@@ -608,19 +615,11 @@ class DCVRPEnvironment:
     def _segment_transition(self, seg_time: float):
         self._transition_refund += self._execute_until_boundary(seg_time)
         self._log_interval_cut(seg_time)
-        # Last interval has no later boundary. Homogeneous Poisson arrivals in
-        # (T_9, T] must enter that final static VRP; greedy continuous already
-        # sees them. Constraint (8) still waits until a_i.
-        entering_last = self.current_segment + 1 >= self.segment_count - 1
-        cutoff = self.horizon if entering_last else float(seg_time)
-        reveal = (self.nodes[:, :, 4] <= cutoff) & (~self.served)
+        self.current_segment += 1
         old_mask = self.cust_mask.clone()
-        self.cust_mask = self.cust_mask & ~reveal
-        reveal_expanded = reveal[:, None, :].expand(-1, self.veh_count, -1)
-        self.total_cust_mask = self.total_cust_mask & ~reveal_expanded
+        self._sync_visibility()
         self.new_customers = (old_mask != self.cust_mask).any().item()
         self.interval_advanced = True
-        self.current_segment += 1
         self.pending_customers = (~self.served).float().sum(-1, keepdim=True) - 1
         self.done = False
         self.veh_done[:] = False
@@ -637,11 +636,20 @@ class DCVRPEnvironment:
     def _finalize_routes(self, reward: torch.Tensor) -> torch.Tensor:
         if self._finalized:
             return reward
+        if self._event_start:
+            reward = reward + self._execute_until_boundary(self.horizon)
         residual = self._flush_all_residuals()
         extra = self._depot_return_distance()
         extra = torch.where(extra <= 1e-6, torch.zeros_like(extra), extra)
         self.total_distance = self.total_distance + extra.squeeze(1)
-        pending = (~self.served).float().sum(-1, keepdim=True) - 1
+        depot = self.nodes[:, 0, :2]
+        away = torch.norm(self.vehicles[:, :, :2] - depot[:, None, :], dim=-1) > 1e-6
+        self.vehicles = self.vehicles.clone()
+        self.vehicles[:, :, :2] = torch.where(
+            away.unsqueeze(-1), depot[:, None, :], self.vehicles[:, :, :2]
+        )
+        self.last_node = torch.where(away, torch.zeros_like(self.last_node), self.last_node)
+        pending = self.unserved_count()
         self.pending_customers = pending
         self._log_interval_cut(self.horizon)
         self._finalized = True
@@ -649,36 +657,17 @@ class DCVRPEnvironment:
 
     def step(self, cust_idx: torch.Tensor):
         self._transition_refund.zero_()
+        self._construct_steps += 1
         cust_idx = cust_idx.to(self.device)
         residual = self._flush_selected_residual()
         last_interval = self.current_segment >= self.segment_count - 1
-        # Algorithm 1 keeps a depot leg only if it starts before T_{r+1}.
-        # With normalized speed 480 that start is almost immediate, so a
-        # real mid-interval return is committed whenever visible work ends.
-        # Hidden customers will appear next interval. Stay in the field after
-        # the first committed return so speed 480 cannot start a round trip
-        # every interval. High-dynamism instances (more than half hidden at
-        # t=0) keep that first terminator as a real Algorithm 1 depot.
-        hidden_left = self.cust_mask[:, 1:].any(dim=1, keepdim=True)
-        if last_interval:
-            wait_in_place = torch.zeros_like(cust_idx, dtype=torch.bool)
-        else:
-            wait_in_place = (cust_idx == 0) & hidden_left
-            init_hidden = getattr(self, "_init_hidden", None)
-            paid = getattr(self, "_paid_mid_depot", None)
-            if init_hidden is not None and paid is not None:
-                high = (init_hidden > (self.nodes_count - 1) / 2.0)[:, None]
-                already = paid.gather(1, self.cur_veh_idx)
-                first_real = high & (cust_idx == 0) & hidden_left & ~already
-                wait_in_place = wait_in_place & ~first_real
-                self._paid_mid_depot = paid.clone().scatter_(
-                    1, self.cur_veh_idx, already | first_real
-                )
+        wait_in_place = torch.zeros_like(cust_idx, dtype=torch.bool)
         self._wait_in_place = wait_in_place
         destination = self.nodes.gather(
             1, cust_idx[:, :, None].expand(-1, -1, self.CUST_FEAT_SIZE)
         )
         distance, _ = self._update_vehicles(destination)
+        self._refill_depot_capacity(cust_idx)
         self._record_tensor_event(cust_idx, distance, valid=~wait_in_place)
         self.total_distance += distance.squeeze(1)
         self.last_node.scatter_(
@@ -693,7 +682,13 @@ class DCVRPEnvironment:
         self._wait_in_place = None
         self._update_done(cust_idx)
         self._update_mask_after_action(cust_idx)
+        self._sync_vehicle_completion()
         reward = -distance - residual
+
+        max_steps = self.nodes_count * self.veh_count * (self.segment_count + 5)
+        if self._construct_steps > max_steps and not self.done:
+            self.done = True
+            last_interval = True
 
         if self.done and last_interval:
             reward = self._finalize_routes(reward)
@@ -709,7 +704,19 @@ class DCVRPEnvironment:
         """Cumulative physical distance of executed routes (Eq. 14)."""
         return self.total_distance.clone()
 
+    def physically_completed(self) -> torch.Tensor:
+        """Constraint (8): assigned and service started at or before T."""
+        done = self.served.clone()
+        done[:, 1:] = self.served[:, 1:] & (
+            self._start_time[:, 1:] <= (self.horizon + 1e-6)
+        )
+        return done
+
+    def unserved_count(self) -> torch.Tensor:
+        """|C_unserved| in Eq. 14: not started by the planning horizon."""
+        return (~self.physically_completed()).float().sum(-1, keepdim=True) - 1.0
+
     def qos(self) -> torch.Tensor:
-        """Quality of Service: fraction of customers successfully fulfilled."""
-        pending = (~self.served).sum(dim=-1).float() - 1.0
+        """Quality of Service: fraction whose service started by T."""
+        pending = self.unserved_count().squeeze(-1)
         return 1.0 - pending / float(self.nodes_count - 1)

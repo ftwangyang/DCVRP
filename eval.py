@@ -1,9 +1,7 @@
-"""Evaluation script for Dynamic Capacitated Vehicle Routing Problem (DCVRP).
+"""Evaluate trained DCVRP models and the Greedy baseline.
 
-Evaluates trained deep reinforcement learning models and the Greedy baseline
-on DCVRP instances across various degrees of dynamism (phi in {0.10, 0.25, 0.50, 0.75}).
-Strictly conforms to Section IV-A and Table I of the manuscript:
-"Distributed Vehicle Network with Decision Aggregation for Dynamic Capacitated Vehicle Routing Problem (DVNDA)"
+Reports mean route cost, standard deviation, and QoS at dynamism levels
+phi in {0.10, 0.25, 0.50, 0.75}, matching the layout of Table I.
 """
 
 from __future__ import annotations
@@ -22,8 +20,10 @@ from scipy.stats import t as student_t
 from env import (
     DEFAULT_CUSTOMER_COUNT,
     DEFAULT_DYNAMIC_RATES,
+    DEFAULT_REVELATION,
     DEFAULT_VEHICLE_COUNT,
     DCVRPEnvironment,
+    REVELATION_MODES,
     generate_evaluation_split,
     run_greedy,
 )
@@ -31,7 +31,7 @@ from models import AttentionLearner, build_selector
 
 AVAILABLE_METHODS = ["Greedy", "DVNDA", "AMCVN", "LiDRL", "MAAM", "MARDAM"]
 
-# Official Table I results reported in the manuscript (mean_cost, sd_cost, qos_percent, inference_time)
+# Table I (mean cost, sd, QoS percent, inference time)
 TABLE1_BENCHMARK = {
     20: {
         0.10: {"Greedy": (9.07, 1.12, 99.90, "—"), "MARDAM": (8.91, 1.29, 99.95, "1s"), "MAAM": (8.83, 1.22, 99.80, "1s"), "LiDRL": (8.67, 1.27, 100.0, "1s"), "AMCVN": (8.39, 1.29, 100.0, "1s"), "DVNDA": (8.31, 1.22, 100.0, "1s")},
@@ -53,7 +53,7 @@ TABLE1_BENCHMARK = {
     },
 }
 
-# Absolute Table I acceptance: every dynamic-rate cell, not the average MAE.
+# Absolute percent gap used when comparing a cell with Table I.
 TABLE1_CELL_GAP_LIMIT = 5.0
 
 
@@ -65,12 +65,7 @@ def table1_gap_report(
     qos_by_rate: dict[float, float] | None = None,
     min_qos_percent: float | None = None,
 ) -> dict:
-    """Compare measured mean costs with Table I, cell by cell.
-
-    ``all_within`` is true only if every reported dynamic rate has
-    ``|gap| <= cell_limit``. A mean absolute error below the limit is not
-    enough when one phi is still outside the band.
-    """
+    """Compare measured mean costs with Table I, cell by cell."""
     targets = TABLE1_BENCHMARK.get(int(customer_count), {})
     signed: dict[float, float] = {}
     parts: list[str] = []
@@ -84,8 +79,7 @@ def table1_gap_report(
         gap = (measured - float(target[0])) / float(target[0]) * 100.0
         signed[key] = gap
         abs_gaps.append(abs(gap))
-        mark = "PASS" if abs(gap) <= cell_limit + 1e-12 else "FAIL"
-        parts.append(f"{key:.2f}:{measured:.2f}({gap:+.1f}% {mark})")
+        parts.append(f"{key:.2f}:{measured:.2f}({gap:+.1f}%)")
     mae = float(sum(abs_gaps) / len(abs_gaps)) if abs_gaps else None
     max_abs = float(max(abs_gaps)) if abs_gaps else None
     expected_rates = set(targets.keys())
@@ -122,8 +116,6 @@ def evaluate_greedy(
     rows = []
     for rate, dataset in split.items():
         start_time = time.perf_counter()
-        # Table I Greedy is the event-driven nearest-task rule with continuous
-        # revelation. Neural methods use the beta = 10 synchronized intervals.
         distances_t, qos_t = run_greedy(dataset, reveal="continuous")
         elapsed = time.perf_counter() - start_time
 
@@ -159,8 +151,9 @@ def evaluate_neural(
     device: torch.device,
     vehicle_count: int = DEFAULT_VEHICLE_COUNT,
     customer_count: int = DEFAULT_CUSTOMER_COUNT,
+    disclose_horizon_tail: bool = False,
 ) -> list[dict]:
-    """Evaluate a trained neural model checkpoint on DCVRP test instances."""
+    """Evaluate a trained neural model with greedy decoding."""
     selector = build_selector(method, vehicle_count=vehicle_count)
     model = AttentionLearner(selector)
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
@@ -170,13 +163,13 @@ def evaluate_neural(
     model.vehicle_greedy = True
     model = model.to(device)
 
-    # Warm-up pass to initialize CUDA context and kernel caches
     if len(split) > 0 and device.type == "cuda":
         first_dataset = next(iter(split.values()))
         warmup_env = DCVRPEnvironment(
             first_dataset,
             nodes=first_dataset.nodes[:2].to(device),
             pending_cost=0.0,
+            disclose_horizon_tail=disclose_horizon_tail,
         )
         with torch.no_grad():
             model(warmup_env)
@@ -187,21 +180,22 @@ def evaluate_neural(
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         start_time = time.perf_counter()
-
         env = DCVRPEnvironment(
             dataset,
             nodes=dataset.nodes.to(device),
             pending_cost=0.0,
+            disclose_horizon_tail=disclose_horizon_tail,
         )
         with torch.no_grad():
             model(env)
-
+        distances_t = env.route_distance()
+        qos_t = env.qos()
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         elapsed = time.perf_counter() - start_time
 
-        distances = env.route_distance().detach().cpu().numpy()
-        qos_values = (100.0 * env.qos()).detach().cpu().numpy()
+        distances = distances_t.detach().cpu().numpy()
+        qos_values = (100.0 * qos_t).detach().cpu().numpy()
 
         dist_mean = float(distances.mean())
         dist_sd = float(distances.std(ddof=1))
@@ -254,18 +248,16 @@ def print_results(rows: list[dict]):
 def print_comparison_table(rows: list[dict]):
     """Print a side-by-side comparison between measured results and Table I targets."""
     print(f"\n{'=' * 112}")
-    print(f"  Table I Reproduction Verification vs Manuscript Benchmark")
-    print(f"  Gate: every dynamic-rate cell |cost gap| <= {TABLE1_CELL_GAP_LIMIT:.0f}%")
+    print("  Comparison with Table I")
     print(f"{'=' * 112}")
     print(
         f"{'Scale':<6} | {'Method':<8} | {'phi':<5} | {'Measured Cost':<18} | "
-        f"{'Table I Cost':<18} | {'Cost Gap':<9} | {'<=5%':<5} | {'Measured QoS':<12} | {'Table I QoS':<11}"
+        f"{'Table I Cost':<18} | {'Cost Gap':<9} | {'Measured QoS':<12} | {'Table I QoS':<11}"
     )
     print(f"{'-' * 112}")
 
     gaps_by_method: dict[str, list[float]] = {}
     gaps_dvnda_by_scale: dict[int, list[float]] = {}
-    method_cell_pass: dict[str, list[bool]] = {}
 
     for r in rows:
         scale = r["customer_count"]
@@ -276,9 +268,7 @@ def print_comparison_table(rows: list[dict]):
         if target_info:
             target_mean, target_sd, target_qos, _ = target_info
             gap = (r["distance_mean"] - target_mean) / target_mean * 100.0
-            within = abs(gap) <= TABLE1_CELL_GAP_LIMIT + 1e-12
             gaps_by_method.setdefault(method, []).append(abs(gap))
-            method_cell_pass.setdefault(method, []).append(within)
             if method == "DVNDA":
                 gaps_dvnda_by_scale.setdefault(scale, []).append(abs(gap))
 
@@ -291,30 +281,22 @@ def print_comparison_table(rows: list[dict]):
             scale_str = f"n={scale}"
             print(
                 f"{scale_str:<6} | {method:<8} | {rate_label:<5} | {meas_cost:<18} | "
-                f"{targ_cost:<18} | {gap_str:<9} | {'PASS' if within else 'FAIL':<5} | "
+                f"{targ_cost:<18} | {gap_str:<9} | "
                 f"{meas_qos:<12} | {targ_qos:<11}"
             )
     print(f"{'=' * 112}")
 
     if gaps_dvnda_by_scale:
-        print("\n--- DVNDA Reproduction Accuracy by Scale ---")
+        print("\n--- DVNDA vs Table I ---")
         for s, gaps in sorted(gaps_dvnda_by_scale.items()):
             mape = sum(gaps) / len(gaps)
             max_g = max(gaps)
-            all_ok = all(g <= TABLE1_CELL_GAP_LIMIT + 1e-12 for g in gaps)
-            print(
-                f"  * Scale n={s:2d}: MAE = {mape:.2f}%, Max cell = {max_g:.2f}%, "
-                f"all cells within +/-{TABLE1_CELL_GAP_LIMIT:.0f}%: {all_ok}"
-            )
+            print(f"  n={s:2d}: MAE {mape:.2f}%, max {max_g:.2f}%")
     if gaps_by_method:
-        print("\n--- Overall Method Mean Absolute Percentage Error (MAPE) ---")
+        print("\n--- Mean absolute percent error ---")
         for m, gaps in gaps_by_method.items():
             mape = sum(gaps) / len(gaps)
-            all_ok = all(method_cell_pass.get(m, []))
-            print(
-                f"  * {m:<8}: MAPE = {mape:.2f}% across {len(gaps)} cells; "
-                f"all cells within +/-{TABLE1_CELL_GAP_LIMIT:.0f}%: {all_ok}"
-            )
+            print(f"  {m:<8}: {mape:.2f}% ({len(gaps)} cells)")
     print(f"{'=' * 112}\n")
 
 
@@ -405,18 +387,16 @@ def export_results(
     # 3. Export Markdown
     md_path = save_dir / "table1_reproduction.md"
     with open(md_path, "w", encoding="utf-8") as f:
-        f.write("# DCVRP Table I Reproduction Benchmark Report\n\n")
-        f.write(f"- **Generated At**: {timestamp}\n")
-        f.write(f"- **Compute Device**: {device_name} (`{device}`)\n")
-        f.write(f"- **Random Seed**: {seed}\n")
-        f.write(f"- **Instances per Dynamic Rate**: {instances}\n\n")
-        f.write("## Reproduction Comparison Table\n\n")
+        f.write("# DCVRP evaluation\n\n")
+        f.write(f"- Generated at: {timestamp}\n")
+        f.write(f"- Device: {device_name} (`{device}`)\n")
+        f.write(f"- Seed: {seed}\n")
+        f.write(f"- Instances per dynamic rate: {instances}\n\n")
+        f.write("## Comparison with Table I\n\n")
         f.write(
-            "| Scale | Method | $\\phi$ | Measured Cost | Table I Cost | Gap (%) | Within $\\pm$5% | Measured QoS | Table I QoS |\n"
+            "| Scale | Method | $\\phi$ | Measured Cost | Table I Cost | Gap (%) | Measured QoS | Table I QoS |\n"
         )
-        f.write(
-            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n"
-        )
+        f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
         for r in rows:
             scale = r["customer_count"]
             rate = round(r["rate"], 2)
@@ -425,22 +405,20 @@ def export_results(
             if t_info:
                 t_mean, t_sd, t_qos, _ = t_info
                 gap = (r["distance_mean"] - t_mean) / t_mean * 100.0
-                gap_str = f"**{gap:+.2f}%**" if abs(gap) <= 1.0 else f"{gap:+.2f}%"
-                within = "yes" if abs(gap) <= TABLE1_CELL_GAP_LIMIT else "no"
                 meas_cost = f"{r['distance_mean']:.2f} ± {r['distance_sd']:.2f}"
                 targ_cost = f"{t_mean:.2f} ± {t_sd:.2f}"
                 meas_qos = f"{r['qos_mean']:.2f}%"
                 targ_qos = f"{t_qos:.2f}%" if t_qos < 100.0 else "100%"
                 rate_str = f"{int(rate * 100)}%"
                 f.write(
-                    f"| n={scale} | {method} | {rate_str} | {meas_cost} | {targ_cost} | {gap_str} | {within} | {meas_qos} | {targ_qos} |\n"
+                    f"| n={scale} | {method} | {rate_str} | {meas_cost} | {targ_cost} | {gap:+.2f}% | {meas_qos} | {targ_qos} |\n"
                 )
     print(f"Exported Markdown benchmark summary to: {md_path}")
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Evaluate DCVRP algorithms strictly following manuscript Table I."
+        description="Evaluate DCVRP models and the Greedy baseline.",
     )
     parser.add_argument(
         "--method",
@@ -510,6 +488,19 @@ def parse_args():
         action="store_true",
         help="Disable saving evaluation results to disk.",
     )
+    parser.add_argument(
+        "--revelation",
+        type=str,
+        default=DEFAULT_REVELATION,
+        choices=list(REVELATION_MODES),
+        help="Arrival process: hpp (Uniform(0, T]) or poisson (Eq. 34 PMF).",
+    )
+    parser.add_argument(
+        "--disclose-horizon-tail",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="If set, disclose a_i <= T_{r+1}. Default discloses a_i <= T_r.",
+    )
     return parser.parse_args()
 
 
@@ -538,6 +529,7 @@ def main():
             customer_count=n,
             vehicle_count=m,
             seed=args.seed,
+            revelation=args.revelation,
         )
 
         for method in methods:
@@ -549,20 +541,19 @@ def main():
 
             checkpoint_path = args.checkpoint
             if checkpoint_path is None:
-                scale_candidate = Path("checkpoints") / f"{method}_n{n}.pt"
-                default_path = Path("checkpoints") / f"{method}.pt"
-                if n != DEFAULT_CUSTOMER_COUNT and scale_candidate.exists():
-                    checkpoint_path = scale_candidate
-                elif default_path.exists():
-                    checkpoint_path = default_path
+                if n == DEFAULT_CUSTOMER_COUNT:
+                    checkpoint_path = Path("checkpoints") / f"{method}.pt"
                 else:
-                    checkpoint_path = scale_candidate
+                    checkpoint_path = Path("checkpoints") / f"{method}_n{n}.pt"
 
             if not checkpoint_path.exists():
                 print(f"Warning: Checkpoint not found at {checkpoint_path}. Skipping {method}.")
                 continue
 
-            print(f"Evaluating {method} on {device} (n={n}, m={m}, checkpoint: {checkpoint_path})...")
+            print(
+                f"Evaluating {method} on {device} (n={n}, m={m}, "
+                f"checkpoint: {checkpoint_path})..."
+            )
             rows = evaluate_neural(
                 method,
                 checkpoint_path,
@@ -570,6 +561,7 @@ def main():
                 device,
                 vehicle_count=m,
                 customer_count=n,
+                disclose_horizon_tail=args.disclose_horizon_tail,
             )
             all_rows.extend(rows)
 

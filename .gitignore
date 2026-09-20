@@ -1,7 +1,10 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .env
@@ -9,32 +12,21 @@ __pycache__/
 .venv*
 */.venv*
 
-# Antigravity agent temp files
-.gemini/
-
-# Scratch & logs
+# Training and evaluation outputs
 results/
 scratch/
 tmp/
 logs/
 *.log
-checkpoints/paper_align_smoke/
 wandb/
-.pytest_cache/
-.coverage
-htmlcov/
 
-# Heavy uncompressed images (use PNG/PDF for repository assets)
-*.tiff
-*.tif
+# Local experiment runs (keep only the published weights in checkpoints/)
+checkpoints/*/
+checkpoints/*_best.pt
+checkpoints/*_table1_best.pt
 
-# OS & editor files
+# OS and editor
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 desktop.ini
 .vscode/
