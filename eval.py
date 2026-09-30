@@ -1,7 +1,7 @@
 """Evaluate trained DCVRP models and the Greedy baseline.
 
 Reports mean route cost, standard deviation, and QoS at dynamism levels
-phi in {0.10, 0.25, 0.50, 0.75}, matching the layout of Table I.
+phi in {0.10, 0.25, 0.50, 0.75}.
 """
 
 from __future__ import annotations
@@ -19,92 +19,23 @@ from scipy.stats import t as student_t
 
 from env import (
     DEFAULT_CUSTOMER_COUNT,
+    DEFAULT_DECISION_INTERVALS,
+    DEFAULT_DISTRIBUTION,
     DEFAULT_DYNAMIC_RATES,
+    DEFAULT_HORIZON,
     DEFAULT_REVELATION,
+    DEFAULT_VEHICLE_CAPACITY,
     DEFAULT_VEHICLE_COUNT,
+    DEFAULT_VEHICLE_SPEED,
     DCVRPEnvironment,
     REVELATION_MODES,
+    SPATIAL_DISTRIBUTIONS,
     generate_evaluation_split,
     run_greedy,
 )
 from models import AttentionLearner, build_selector
 
 AVAILABLE_METHODS = ["Greedy", "DVNDA", "AMCVN", "LiDRL", "MAAM", "MARDAM"]
-
-# Table I (mean cost, sd, QoS percent, inference time)
-TABLE1_BENCHMARK = {
-    20: {
-        0.10: {"Greedy": (9.07, 1.12, 99.90, "—"), "MARDAM": (8.91, 1.29, 99.95, "1s"), "MAAM": (8.83, 1.22, 99.80, "1s"), "LiDRL": (8.67, 1.27, 100.0, "1s"), "AMCVN": (8.39, 1.29, 100.0, "1s"), "DVNDA": (8.31, 1.22, 100.0, "1s")},
-        0.25: {"Greedy": (9.69, 1.25, 99.90, "—"), "MARDAM": (9.85, 1.27, 99.80, "1s"), "MAAM": (9.68, 1.55, 99.65, "1s"), "LiDRL": (9.45, 1.24, 100.0, "1s"), "AMCVN": (9.23, 1.23, 100.0, "1s"), "DVNDA": (8.95, 1.30, 100.0, "1s")},
-        0.50: {"Greedy": (11.25, 1.43, 99.90, "—"), "MARDAM": (11.45, 1.37, 99.85, "1s"), "MAAM": (11.32, 1.30, 99.40, "1s"), "LiDRL": (11.01, 1.45, 100.0, "1s"), "AMCVN": (10.75, 1.54, 100.0, "1s"), "DVNDA": (10.47, 1.53, 100.0, "1s")},
-        0.75: {"Greedy": (12.43, 1.51, 99.45, "—"), "MARDAM": (12.81, 1.49, 99.85, "1s"), "MAAM": (12.72, 1.53, 99.95, "1s"), "LiDRL": (12.52, 1.62, 100.0, "1s"), "AMCVN": (12.03, 1.47, 100.0, "1s"), "DVNDA": (11.78, 1.44, 100.0, "1s")},
-    },
-    35: {
-        0.10: {"Greedy": (15.95, 1.44, 99.95, "—"), "MARDAM": (15.86, 2.32, 99.95, "1s"), "MAAM": (15.54, 2.37, 99.95, "1s"), "LiDRL": (15.13, 2.42, 100.0, "2s"), "AMCVN": (15.03, 2.42, 100.0, "2s"), "DVNDA": (14.94, 2.00, 100.0, "3s")},
-        0.25: {"Greedy": (16.96, 1.95, 99.95, "—"), "MARDAM": (16.90, 2.42, 99.95, "1s"), "MAAM": (16.83, 2.46, 99.80, "1s"), "LiDRL": (16.71, 2.53, 100.0, "2s"), "AMCVN": (16.42, 2.90, 100.0, "2s"), "DVNDA": (16.14, 2.14, 100.0, "3s")},
-        0.50: {"Greedy": (19.63, 2.01, 99.95, "—"), "MARDAM": (19.79, 2.55, 99.90, "1s"), "MAAM": (19.68, 2.68, 99.65, "1s"), "LiDRL": (19.16, 2.49, 100.0, "2s"), "AMCVN": (19.04, 2.46, 100.0, "2s"), "DVNDA": (18.90, 2.24, 100.0, "3s")},
-        0.75: {"Greedy": (21.55, 2.21, 99.95, "—"), "MARDAM": (21.84, 2.71, 99.85, "1s"), "MAAM": (21.70, 2.11, 99.65, "1s"), "LiDRL": (21.47, 2.85, 100.0, "2s"), "AMCVN": (21.19, 2.62, 100.0, "2s"), "DVNDA": (20.98, 2.26, 100.0, "3s")},
-    },
-    50: {
-        0.10: {"Greedy": (21.41, 2.11, 99.95, "—"), "MARDAM": (21.24, 2.96, 99.95, "3s"), "MAAM": (19.81, 2.24, 99.90, "3s"), "LiDRL": (19.38, 2.31, 100.0, "4s"), "AMCVN": (18.94, 2.75, 100.0, "4s"), "DVNDA": (18.89, 2.27, 100.0, "5s")},
-        0.25: {"Greedy": (22.84, 2.10, 99.85, "—"), "MARDAM": (22.75, 2.81, 99.95, "3s"), "MAAM": (22.33, 2.69, 99.95, "3s"), "LiDRL": (21.78, 2.75, 100.0, "4s"), "AMCVN": (21.56, 2.51, 100.0, "4s"), "DVNDA": (21.21, 2.66, 100.0, "5s")},
-        0.50: {"Greedy": (26.71, 2.48, 99.95, "—"), "MARDAM": (26.91, 2.87, 99.95, "3s"), "MAAM": (26.76, 2.78, 99.80, "3s"), "LiDRL": (25.65, 2.98, 100.0, "4s"), "AMCVN": (25.49, 2.89, 100.0, "4s"), "DVNDA": (25.31, 2.81, 100.0, "5s")},
-        0.75: {"Greedy": (30.19, 2.77, 99.85, "—"), "MARDAM": (30.57, 2.48, 99.90, "3s"), "MAAM": (30.30, 3.11, 99.20, "3s"), "LiDRL": (29.87, 3.07, 100.0, "4s"), "AMCVN": (29.33, 3.05, 100.0, "4s"), "DVNDA": (29.00, 2.69, 100.0, "5s")},
-    },
-}
-
-# Absolute percent gap used when comparing a cell with Table I.
-TABLE1_CELL_GAP_LIMIT = 5.0
-
-
-def table1_gap_report(
-    customer_count: int,
-    method: str,
-    measured_by_rate: dict[float, float],
-    cell_limit: float = TABLE1_CELL_GAP_LIMIT,
-    qos_by_rate: dict[float, float] | None = None,
-    min_qos_percent: float | None = None,
-) -> dict:
-    """Compare measured mean costs with Table I, cell by cell."""
-    targets = TABLE1_BENCHMARK.get(int(customer_count), {})
-    signed: dict[float, float] = {}
-    parts: list[str] = []
-    abs_gaps: list[float] = []
-    for rate in sorted(measured_by_rate, key=float):
-        key = round(float(rate), 2)
-        measured = float(measured_by_rate[rate])
-        target = targets.get(key, {}).get(method)
-        if not target:
-            continue
-        gap = (measured - float(target[0])) / float(target[0]) * 100.0
-        signed[key] = gap
-        abs_gaps.append(abs(gap))
-        parts.append(f"{key:.2f}:{measured:.2f}({gap:+.1f}%)")
-    mae = float(sum(abs_gaps) / len(abs_gaps)) if abs_gaps else None
-    max_abs = float(max(abs_gaps)) if abs_gaps else None
-    expected_rates = set(targets.keys())
-    have_every_rate = expected_rates.issubset(signed.keys())
-    all_within = (
-        have_every_rate
-        and bool(abs_gaps)
-        and all(gap <= cell_limit + 1e-12 for gap in abs_gaps)
-    )
-    qos_ok = True
-    if qos_by_rate is not None and min_qos_percent is not None:
-        qos_ok = all(
-            float(qos) + 1e-6 >= float(min_qos_percent) for qos in qos_by_rate.values()
-        )
-        all_within = all_within and qos_ok
-    return {
-        "signed": signed,
-        "abs_gaps": abs_gaps,
-        "mae": mae,
-        "max_abs": max_abs,
-        "all_within": all_within,
-        "qos_ok": qos_ok,
-        "parts": parts,
-        "cell_limit": float(cell_limit),
-    }
 
 
 def evaluate_greedy(
@@ -221,7 +152,7 @@ def evaluate_neural(
 
 
 def print_results(rows: list[dict]):
-    """Format and print standard evaluation metrics matching Table I layout."""
+    """Format and print standard evaluation metrics."""
     print("=" * 86)
     print(
         f"{'Scale':<6} | {'Method':<8} | {'Dynamic Rate':<12} | "
@@ -245,61 +176,6 @@ def print_results(rows: list[dict]):
     print("=" * 86)
 
 
-def print_comparison_table(rows: list[dict]):
-    """Print a side-by-side comparison between measured results and Table I targets."""
-    print(f"\n{'=' * 112}")
-    print("  Comparison with Table I")
-    print(f"{'=' * 112}")
-    print(
-        f"{'Scale':<6} | {'Method':<8} | {'phi':<5} | {'Measured Cost':<18} | "
-        f"{'Table I Cost':<18} | {'Cost Gap':<9} | {'Measured QoS':<12} | {'Table I QoS':<11}"
-    )
-    print(f"{'-' * 112}")
-
-    gaps_by_method: dict[str, list[float]] = {}
-    gaps_dvnda_by_scale: dict[int, list[float]] = {}
-
-    for r in rows:
-        scale = r["customer_count"]
-        scale_targets = TABLE1_BENCHMARK.get(scale, {})
-        method = r["method"]
-        rate = round(r["rate"], 2)
-        target_info = scale_targets.get(rate, {}).get(method)
-        if target_info:
-            target_mean, target_sd, target_qos, _ = target_info
-            gap = (r["distance_mean"] - target_mean) / target_mean * 100.0
-            gaps_by_method.setdefault(method, []).append(abs(gap))
-            if method == "DVNDA":
-                gaps_dvnda_by_scale.setdefault(scale, []).append(abs(gap))
-
-            gap_str = f"{gap:+.2f}%"
-            meas_cost = f"{r['distance_mean']:.2f} +/- {r['distance_sd']:.2f}"
-            targ_cost = f"{target_mean:.2f} +/- {target_sd:.2f}"
-            meas_qos = f"{r['qos_mean']:.2f}%"
-            targ_qos = f"{target_qos:.2f}%" if target_qos < 100.0 else "100%"
-            rate_label = f"{int(rate * 100)}%"
-            scale_str = f"n={scale}"
-            print(
-                f"{scale_str:<6} | {method:<8} | {rate_label:<5} | {meas_cost:<18} | "
-                f"{targ_cost:<18} | {gap_str:<9} | "
-                f"{meas_qos:<12} | {targ_qos:<11}"
-            )
-    print(f"{'=' * 112}")
-
-    if gaps_dvnda_by_scale:
-        print("\n--- DVNDA vs Table I ---")
-        for s, gaps in sorted(gaps_dvnda_by_scale.items()):
-            mape = sum(gaps) / len(gaps)
-            max_g = max(gaps)
-            print(f"  n={s:2d}: MAE {mape:.2f}%, max {max_g:.2f}%")
-    if gaps_by_method:
-        print("\n--- Mean absolute percent error ---")
-        for m, gaps in gaps_by_method.items():
-            mape = sum(gaps) / len(gaps)
-            print(f"  {m:<8}: {mape:.2f}% ({len(gaps)} cells)")
-    print(f"{'=' * 112}\n")
-
-
 def export_results(
     rows: list[dict],
     save_dir: Path,
@@ -313,7 +189,7 @@ def export_results(
     device_name = torch.cuda.get_device_name(0) if device.type == "cuda" else "CPU"
 
     # 1. Export CSV
-    csv_path = save_dir / "table1_results.csv"
+    csv_path = save_dir / "evaluation_results.csv"
     fieldnames = [
         "scale",
         "vehicle_count",
@@ -326,30 +202,17 @@ def export_results(
         "ci95_high",
         "measured_qos_percent",
         "wall_time_sec",
-        "table1_cost_mean",
-        "table1_cost_sd",
-        "table1_qos_percent",
-        "table1_time",
-        "cost_gap_percent",
-        "within_5_percent",
         "checkpoint",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for r in rows:
-            scale = r["customer_count"]
-            rate = round(r["rate"], 2)
-            method = r["method"]
-            t_info = TABLE1_BENCHMARK.get(scale, {}).get(rate, {}).get(method)
-            t_mean, t_sd, t_qos, t_time = t_info if t_info else (None, None, None, None)
-            gap = ((r["distance_mean"] - t_mean) / t_mean * 100.0) if t_mean else None
-
             writer.writerow({
-                "scale": scale,
+                "scale": r["customer_count"],
                 "vehicle_count": r["vehicle_count"],
-                "method": method,
-                "phi": rate,
+                "method": r["method"],
+                "phi": round(r["rate"], 2),
                 "measured_cost_mean": round(r["distance_mean"], 4),
                 "measured_cost_sd": round(r["distance_sd"], 4),
                 "measured_cost_sem": round(r.get("dist_sem", 0.0), 4),
@@ -357,18 +220,12 @@ def export_results(
                 "ci95_high": round(r["ci95_high"], 4),
                 "measured_qos_percent": round(r["qos_mean"], 4),
                 "wall_time_sec": round(r["elapsed_s"], 4),
-                "table1_cost_mean": t_mean,
-                "table1_cost_sd": t_sd,
-                "table1_qos_percent": t_qos,
-                "table1_time": t_time,
-                "cost_gap_percent": round(gap, 2) if gap is not None else None,
-                "within_5_percent": bool(abs(gap) <= TABLE1_CELL_GAP_LIMIT) if gap is not None else None,
-                "checkpoint": r.get("checkpoint", "heuristic" if method == "Greedy" else ""),
+                "checkpoint": r.get("checkpoint", "heuristic" if r["method"] == "Greedy" else ""),
             })
     print(f"Exported raw tabular results to: {csv_path}")
 
     # 2. Export JSON
-    json_path = save_dir / "table1_results.json"
+    json_path = save_dir / "evaluation_results.json"
     data_payload = {
         "metadata": {
             "timestamp": timestamp,
@@ -385,35 +242,29 @@ def export_results(
     print(f"Exported machine-readable metadata to: {json_path}")
 
     # 3. Export Markdown
-    md_path = save_dir / "table1_reproduction.md"
+    md_path = save_dir / "evaluation_summary.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("# DCVRP evaluation\n\n")
         f.write(f"- Generated at: {timestamp}\n")
         f.write(f"- Device: {device_name} (`{device}`)\n")
         f.write(f"- Seed: {seed}\n")
         f.write(f"- Instances per dynamic rate: {instances}\n\n")
-        f.write("## Comparison with Table I\n\n")
+        f.write("## Evaluation Results\n\n")
         f.write(
-            "| Scale | Method | $\\phi$ | Measured Cost | Table I Cost | Gap (%) | Measured QoS | Table I QoS |\n"
+            "| Scale | Method | $\\phi$ | Measured Cost | Measured QoS |\n"
         )
-        f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
+        f.write("| :--- | :--- | :--- | :--- | :--- |\n")
         for r in rows:
             scale = r["customer_count"]
             rate = round(r["rate"], 2)
             method = r["method"]
-            t_info = TABLE1_BENCHMARK.get(scale, {}).get(rate, {}).get(method)
-            if t_info:
-                t_mean, t_sd, t_qos, _ = t_info
-                gap = (r["distance_mean"] - t_mean) / t_mean * 100.0
-                meas_cost = f"{r['distance_mean']:.2f} ± {r['distance_sd']:.2f}"
-                targ_cost = f"{t_mean:.2f} ± {t_sd:.2f}"
-                meas_qos = f"{r['qos_mean']:.2f}%"
-                targ_qos = f"{t_qos:.2f}%" if t_qos < 100.0 else "100%"
-                rate_str = f"{int(rate * 100)}%"
-                f.write(
-                    f"| n={scale} | {method} | {rate_str} | {meas_cost} | {targ_cost} | {gap:+.2f}% | {meas_qos} | {targ_qos} |\n"
-                )
-    print(f"Exported Markdown benchmark summary to: {md_path}")
+            meas_cost = f"{r['distance_mean']:.2f} ± {r['distance_sd']:.2f}"
+            meas_qos = f"{r['qos_mean']:.2f}%"
+            rate_str = f"{int(rate * 100)}%"
+            f.write(
+                f"| n={scale} | {method} | {rate_str} | {meas_cost} | {meas_qos} |\n"
+            )
+    print(f"Exported Markdown summary to: {md_path}")
 
 
 def parse_args():
@@ -473,11 +324,6 @@ def parse_args():
         help="Computation device ('cuda' or 'cpu').",
     )
     parser.add_argument(
-        "--compare-table1",
-        action="store_true",
-        help="Display side-by-side comparison with published Table I results.",
-    )
-    parser.add_argument(
         "--save-dir",
         type=Path,
         default=Path("results"),
@@ -496,10 +342,23 @@ def parse_args():
         help="Arrival process: hpp (Uniform(0, T]) or poisson (Eq. 34 PMF).",
     )
     parser.add_argument(
+        "--distribution",
+        type=str,
+        default=DEFAULT_DISTRIBUTION,
+        choices=list(SPATIAL_DISTRIBUTIONS),
+        help="Spatial distribution of customers (uniform, clustered, mixed, real).",
+    )
+    parser.add_argument(
+        "--real-data-path",
+        type=str,
+        default=None,
+        help="Path to CSV file with coordinates for 'real' distribution.",
+    )
+    parser.add_argument(
         "--disclose-horizon-tail",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="If set, disclose a_i <= T_{r+1}. Default discloses a_i <= T_r.",
+        help="Disclose a_i <= T_{r+1} at the start of interval r (Algorithm 1). Default False uses a_i <= T_r.",
     )
     return parser.parse_args()
 
@@ -530,6 +389,8 @@ def main():
             vehicle_count=m,
             seed=args.seed,
             revelation=args.revelation,
+            distribution=args.distribution,
+            real_data_path=args.real_data_path,
         )
 
         for method in methods:
@@ -567,8 +428,6 @@ def main():
 
     if all_rows:
         print_results(all_rows)
-        if args.compare_table1:
-            print_comparison_table(all_rows)
         if not args.no_save:
             export_results(
                 all_rows,

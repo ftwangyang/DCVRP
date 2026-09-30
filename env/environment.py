@@ -1,17 +1,20 @@
 """Time-driven DCVRP environment (Algorithm 1).
 
-The horizon T is partitioned into ten equal intervals. Each interval is a
-static VRP. At the start of interval r the controller observes customers
-with appearance time a_i <= T_r (the last interval uses T) and builds a
-route plan. At T_{r+1}:
+The horizon T is split into ten equal intervals. Each interval is a static
+VRP: the customer set is fixed at the start of the interval and no new
+requests appear until the next boundary.
 
-- keep work whose service has already started (D_start < T_{r+1});
-- discard the unstarted suffix;
-- idle vehicles wait until the next decision epoch;
+At the start of interval r the controller observes customers with
+appearance time a_i <= T_{r+1} and builds a route plan. At T_{r+1}:
+
+- keep work that already started (finished, en route, or in service);
+- discard the unstarted suffix and return those customers to the pool;
+- idle vehicles wait in place until the next decision epoch;
 - vehicles still in service cannot start a new task before they finish.
 
-Each vehicle performs a single round trip in an interval: returning to the
-depot ends that tour. A request counts as served if service starts by T.
+Returning to the depot restores capacity so a vehicle may continue if
+leftover demand is capacity-blocked. A request counts as served if
+service starts by T.
 """
 
 from __future__ import annotations
@@ -35,7 +38,7 @@ class DCVRPEnvironment:
         segment_count: int = 10,
         horizon: float = 1.0,
         record_trace: bool = True,
-        disclose_horizon_tail: bool = False,
+        disclose_horizon_tail: bool = True,
     ):
         self.veh_count = data.veh_count
         self.veh_capa = data.veh_capa
@@ -101,7 +104,6 @@ class DCVRPEnvironment:
         )
         self._committed_customer_vehicle_mask[:, :, 0] = True
         self.last_node = torch.zeros((B, V), dtype=torch.long, device=self.device)
-        self._reset_residuals()
         self._clear_interval_events()
         self._transition_refund = self.nodes.new_zeros((B, 1))
         self._finalized = False
@@ -119,13 +121,21 @@ class DCVRPEnvironment:
         self._start_time[:, 0] = 0.0
         self.interval_logs: list[dict] = []
         self._construct_steps = 0
+        self._needs_refill = torch.zeros((B,), dtype=torch.bool, device=self.device)
         self._rebuild_mask()
         self._update_cur_veh()
 
     def _visibility_cutoff_for_segment(self, segment: int) -> float:
-        """Cutoff for interval r: a_i <= T_r, except the last interval uses T."""
-        if self.disclose_horizon_tail or segment >= self.segment_count - 1:
+        """Customers visible at the start of interval r.
+
+        Algorithm 1 discloses a_i <= T_{r+1} (one-interval lookahead) so the
+        first interval already sees arrivals in (0, T_1]. If lookahead is
+        disabled, interval r sees a_i <= T_r and the last interval uses T.
+        """
+        if self.disclose_horizon_tail:
             return min(self.horizon, (segment + 1) * self.segment_duration)
+        if segment >= self.segment_count - 1:
+            return self.horizon
         return segment * self.segment_duration
 
     def _visibility_cutoff(self) -> float:
@@ -139,27 +149,9 @@ class DCVRPEnvironment:
         self.total_cust_mask = self.total_cust_mask & ~reveal_expanded
         self.new_customers = bool(reveal.any())
 
-    def _reset_residuals(self) -> None:
-        B, V = self.minibatch_size, self.veh_count
-        self._residual_active = torch.zeros(
-            (B, V), dtype=torch.bool, device=self.device
-        )
-        self._residual_customer = torch.zeros(
-            (B, V), dtype=torch.long, device=self.device
-        )
-        self._residual_dest = torch.zeros((B, V, 2), device=self.device)
-        self._residual_finish = torch.zeros((B, V), device=self.device)
-        self._residual_dist = torch.zeros((B, V), device=self.device)
-        self._residual_cap = torch.full((B, V), float(self.veh_capa), device=self.device)
-
     def _planning_vehicles(self):
-        """State available after previously committed work finishes."""
-        state = self.vehicles.clone()
-        active = self._residual_active
-        state[:, :, :2] = torch.where(active.unsqueeze(-1), self._residual_dest, state[:, :, :2])
-        state[:, :, 2] = torch.where(active, self._residual_cap, state[:, :, 2])
-        state[:, :, 3] = torch.where(active, torch.maximum(state[:, :, 3], self._residual_finish), state[:, :, 3])
-        return state
+        """Current physical state of the vehicles."""
+        return self.vehicles
 
     def _rebuild_mask(self):
         planning = self._planning_vehicles()
@@ -173,18 +165,24 @@ class DCVRPEnvironment:
         )
         arrival_time = planning[:, :, None, 3] + dist_to_customer / self.veh_speed
         service_start = torch.maximum(arrival_time, self.nodes[:, None, :, 4])
-        # Constraint (8): service must start by T. Stops that would begin
-        # after the next interval boundary are still planned; Algorithm 1
-        # discards any that have not started when the boundary is reached.
+        # Constraint (8): service must start by T. The static plan may extend
+        # past the next boundary; unstarted stops are destroyed at T_{r+1}.
         time_mask = service_start > (self.horizon + 1e-6)
         time_mask[:, :, 0] = False
         self.mask = self.mask | time_mask
 
-        # Close the depot while this vehicle still has a feasible customer.
-        # A depot visit ends the interval tour; leftover demand waits until
-        # the next decision epoch rather than starting a second loaded trip.
+        # Keep the depot closed while this vehicle still has a feasible
+        # customer. Open it when remaining demand cannot be served with
+        # leftover capacity, so the fleet can refill and continue.
         has_feasible_customer = (~self.mask[:, :, 1:]).any(dim=2)
-        self.mask[:, :, 0] = has_feasible_customer
+        any_vehicle_can_serve = (~self.mask[:, :, 1:]).any(dim=1)
+        visible_unserved = (~self.cust_mask) & (~self.served)
+        visible_unserved[:, 0] = False
+        stranded = visible_unserved.clone()
+        stranded[:, 1:] = visible_unserved[:, 1:] & ~any_vehicle_can_serve
+        row_needs_refill = stranded.any(dim=1, keepdim=True)
+        self.mask[:, :, 0] = has_feasible_customer & ~row_needs_refill
+        self._needs_refill = row_needs_refill.squeeze(1)
 
     def _update_mask_after_action(self, cust_idx: torch.Tensor):
         new_served = self.served.clone()
@@ -254,14 +252,25 @@ class DCVRPEnvironment:
 
     def _update_done(self, cust_idx: torch.Tensor):
         is_depot = cust_idx == 0
-        self.returned_to_depot = self.returned_to_depot.clone().scatter_(
-            1, self.cur_veh_idx, is_depot
-        )
-        # Returning to the depot finishes this interval's tour.
+        wait_in_place = getattr(self, "_wait_in_place", None)
+        if wait_in_place is not None:
+            curr_ret = self.returned_to_depot.gather(1, self.cur_veh_idx)
+            new_ret = torch.where(wait_in_place, curr_ret, is_depot)
+            self.returned_to_depot = self.returned_to_depot.clone().scatter_(
+                1, self.cur_veh_idx, new_ret
+            )
+        else:
+            self.returned_to_depot = self.returned_to_depot.clone().scatter_(
+                1, self.cur_veh_idx, is_depot
+            )
+        # veh_done is resolved after the mask rebuild.
 
     def _refill_depot_capacity(self, cust_idx: torch.Tensor) -> None:
         """Restore Q when the acting vehicle reaches the depot."""
         is_depot = (cust_idx == 0).squeeze(-1)
+        wait_in_place = getattr(self, "_wait_in_place", None)
+        if wait_in_place is not None:
+            is_depot = is_depot & (~wait_in_place.squeeze(-1))
         if not bool(is_depot.any()):
             return
         batch = torch.arange(self.minibatch_size, device=self.device)
@@ -276,7 +285,7 @@ class DCVRPEnvironment:
 
     def _sync_vehicle_completion(self) -> None:
         feasible_customer = (~self.mask[:, :, 1:]).any(dim=2)
-        self.veh_done = self.returned_to_depot.clone()
+        self.veh_done = self.returned_to_depot & ~feasible_customer
         if self.current_segment >= self.segment_count - 1:
             self.done = bool(self.veh_done.all().item()) and not bool(
                 feasible_customer.any().item()
@@ -384,8 +393,8 @@ class DCVRPEnvironment:
             states = states.squeeze(2)
         finishes = states[:, :, 3]
 
-        not_started = (starts >= T) & valid
-        committed = (starts < T) & valid
+        not_started = (starts > (T + 1e-6)) & valid
+        committed = (starts <= (T + 1e-6)) & valid
         executed = torch.where(committed, distances, torch.zeros_like(distances))
         refund = torch.where(not_started, distances, torch.zeros_like(distances)).sum(
             dim=1, keepdim=True
@@ -439,7 +448,6 @@ class DCVRPEnvironment:
         restored[:, :, 3] = torch.where(
             has_committed, restored[:, :, 3], unused_time
         )
-        self._reset_residuals()
 
         last_payload = customers.unsqueeze(-1).to(restored.dtype)
         empty_last = last_payload.new_zeros((B, V, 1))
@@ -466,70 +474,6 @@ class DCVRPEnvironment:
         self.boundary_clocks.append(self.vehicles[:, :, 3].detach().clone())
         return refund
 
-    def _flush_selected_residual(self) -> torch.Tensor:
-        """Finish Algorithm 1 committed work for the acting vehicles."""
-        idx = self.cur_veh_idx
-        active = self._residual_active.gather(1, idx)
-        extra = self._residual_dist.gather(1, idx) * active.to(self.vehicles.dtype)
-        dest = self._residual_dest.gather(
-            1, idx[:, :, None].expand(-1, -1, 2)
-        )
-        finish = self._residual_finish.gather(1, idx)
-        cap = self._residual_cap.gather(1, idx)
-        customer = self._residual_customer.gather(1, idx)
-
-        # Record residual travel/service as an execution event so the next
-        # boundary can interpolate it and retain unfinished work again.
-        residual_origin = self.cur_veh[:, :, :2].detach().clone()
-        residual_start = self.cur_veh[:, :, 3].detach().clone()
-
-        new_cur = self.cur_veh.clone()
-        new_cur[:, :, :2] = torch.where(active.unsqueeze(-1), dest, new_cur[:, :, :2])
-        new_cur[:, :, 2] = torch.where(active, cap, new_cur[:, :, 2])
-        new_cur[:, :, 3] = torch.where(
-            active, torch.maximum(new_cur[:, :, 3], finish), new_cur[:, :, 3]
-        )
-        updated = self.vehicles.clone()
-        updated.scatter_(
-            1,
-            idx[:, :, None].expand(-1, -1, self.VEH_STATE_SIZE),
-            new_cur,
-        )
-        self.vehicles = updated
-        self.cur_veh = new_cur
-        self._last_origin = residual_origin
-        self._last_start = residual_start
-        self._last_arrival = residual_start + extra / self.veh_speed
-        if bool(active.any()):
-            self._record_tensor_event(customer, extra, valid=active)
-        self.last_node.scatter_(
-            1, idx, torch.where(active, customer, self.last_node.gather(1, idx))
-        )
-        self._residual_active.scatter_(1, idx, False)
-        self.total_distance = self.total_distance + extra.squeeze(1)
-        return extra
-
-    def _flush_all_residuals(self) -> torch.Tensor:
-        extra = self._residual_dist * self._residual_active.to(self.vehicles.dtype)
-        active = self._residual_active.unsqueeze(-1)
-        self.vehicles = self.vehicles.clone()
-        self.vehicles[:, :, :2] = torch.where(
-            active, self._residual_dest, self.vehicles[:, :, :2]
-        )
-        self.vehicles[:, :, 2] = torch.where(
-            self._residual_active, self._residual_cap, self.vehicles[:, :, 2]
-        )
-        self.vehicles[:, :, 3] = torch.where(
-            self._residual_active,
-            torch.maximum(self.vehicles[:, :, 3], self._residual_finish),
-            self.vehicles[:, :, 3],
-        )
-        self.last_node = torch.where(
-            self._residual_active, self._residual_customer, self.last_node
-        )
-        self.total_distance = self.total_distance + extra.sum(dim=1)
-        self._residual_active[:] = False
-        return extra.sum(dim=1, keepdim=True)
 
     def _clear_interval_events(self) -> None:
         self._event_vehicle.clear()
@@ -543,9 +487,20 @@ class DCVRPEnvironment:
         self._segment_vehicle_snapshot = self.vehicles.detach().clone()
 
     def _planning_complete(self) -> bool:
-        """True when the interval static VRP is fully constructed."""
-        no_work = not bool((~self.mask[:, :, 1:]).any().item())
-        return no_work and bool(self.returned_to_depot.all().item())
+        """True when this interval's static VRP has no remaining work.
+
+        Algorithm 1 does not require every vehicle to return to the depot
+        before T_{r+1}. Idle vehicles wait in place until the next epoch.
+        Keep the interval open only while leftover visible demand still
+        needs a depot refill to continue.
+        """
+        no_customer = not bool((~self.mask[:, :, 1:]).any().item())
+        if not no_customer:
+            return False
+        needs_refill = getattr(self, "_needs_refill", None)
+        if needs_refill is not None and bool(needs_refill.any().item()):
+            return False
+        return True
 
     def _check_segment_transition(self):
         if self.current_segment >= self.segment_count - 1:
@@ -638,7 +593,6 @@ class DCVRPEnvironment:
             return reward
         if self._event_start:
             reward = reward + self._execute_until_boundary(self.horizon)
-        residual = self._flush_all_residuals()
         extra = self._depot_return_distance()
         extra = torch.where(extra <= 1e-6, torch.zeros_like(extra), extra)
         self.total_distance = self.total_distance + extra.squeeze(1)
@@ -653,15 +607,25 @@ class DCVRPEnvironment:
         self.pending_customers = pending
         self._log_interval_cut(self.horizon)
         self._finalized = True
-        return reward - residual - extra - self.pending_cost * pending
+        return reward - extra - self.pending_cost * pending
 
     def step(self, cust_idx: torch.Tensor):
         self._transition_refund.zero_()
         self._construct_steps += 1
         cust_idx = cust_idx.to(self.device)
-        residual = self._flush_selected_residual()
         last_interval = self.current_segment >= self.segment_count - 1
-        wait_in_place = torch.zeros_like(cust_idx, dtype=torch.bool)
+        all_veh_done = self.veh_done.all(dim=1, keepdim=True)
+        has_feasible_customer = (~self.mask[:, :, 1:]).any(dim=2).any(dim=1, keepdim=True)
+        needs_refill = (
+            self._needs_refill.view(-1, 1)
+            if getattr(self, "_needs_refill", None) is not None
+            else torch.zeros_like(all_veh_done)
+        )
+        has_feasible_work = has_feasible_customer | needs_refill
+        wait_in_place = (
+            ((~has_feasible_work) & (cust_idx == 0) & (not last_interval))
+            | (all_veh_done & (cust_idx == 0))
+        )
         self._wait_in_place = wait_in_place
         destination = self.nodes.gather(
             1, cust_idx[:, :, None].expand(-1, -1, self.CUST_FEAT_SIZE)
@@ -679,11 +643,11 @@ class DCVRPEnvironment:
                 cust_idx,
             ),
         )
-        self._wait_in_place = None
         self._update_done(cust_idx)
+        self._wait_in_place = None
         self._update_mask_after_action(cust_idx)
         self._sync_vehicle_completion()
-        reward = -distance - residual
+        reward = -distance
 
         max_steps = self.nodes_count * self.veh_count * (self.segment_count + 5)
         if self._construct_steps > max_steps and not self.done:

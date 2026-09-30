@@ -1,35 +1,7 @@
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Virtual environments
-.env
-.venv
-.venv*
-*/.venv*
-
-# Training and evaluation outputs
 results/
-scratch/
-tmp/
 logs/
-*.log
-wandb/
-
-# Local experiment runs (keep only the published weights in checkpoints/)
-checkpoints/*/
-checkpoints/*_best.pt
-checkpoints/*_table1_best.pt
-
-# OS and editor
 .DS_Store
-Thumbs.db
-desktop.ini
-.vscode/
-.idea/
-*.swp
-*.swo
+*.pdf

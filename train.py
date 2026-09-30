@@ -14,8 +14,11 @@ Unserved customers are penalized with alpha = 5 (Eq. 14).
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from pathlib import Path
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import numpy as np
 import torch
@@ -26,18 +29,35 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from env import (
     DEFAULT_CUSTOMER_COUNT,
+    DEFAULT_DECISION_INTERVALS,
+    DEFAULT_DISTRIBUTION,
     DEFAULT_DYNAMIC_RATES,
+    DEFAULT_HORIZON,
     DEFAULT_REVELATION,
+    DEFAULT_VEHICLE_CAPACITY,
     DEFAULT_VEHICLE_COUNT,
+    DEFAULT_VEHICLE_SPEED,
     DCVRPDataset,
     DCVRPEnvironment,
     REVELATION_MODES,
+    SPATIAL_DISTRIBUTIONS,
     generate_dataset,
     generate_evaluation_split,
     set_seed,
 )
-from eval import TABLE1_CELL_GAP_LIMIT, table1_gap_report
 from models import AttentionLearner, build_selector
+
+
+def merge_datasets(parts: list[DCVRPDataset]) -> DCVRPDataset:
+    """Stack per-phi validation sets for one paired t-test."""
+    first = parts[0]
+    return DCVRPDataset(
+        vehicle_count=first.veh_count,
+        vehicle_capacity=first.veh_capa,
+        vehicle_speed=first.veh_speed,
+        nodes=torch.cat([part.nodes.detach().cpu() for part in parts], dim=0),
+        revelation=getattr(first, "revelation", DEFAULT_REVELATION),
+    )
 
 
 def repeat_rollout_batch(data: DCVRPDataset, repeats: int) -> DCVRPDataset:
@@ -210,6 +230,13 @@ def parse_args():
         help="Path to an existing checkpoint to resume training from.",
     )
     parser.add_argument(
+        "--train-rates",
+        type=float,
+        nargs="+",
+        default=None,
+        help="Dynamic rates cycled during training. Default: 0.10 0.25 0.50 0.75.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("checkpoints"),
@@ -228,18 +255,6 @@ def parse_args():
         help="Sampled policy rollouts per training instance (paper: 3).",
     )
     parser.add_argument(
-        "--early-stop-epoch",
-        type=int,
-        default=0,
-        help="If >0, stop once every reported Table I cell is within --early-stop-mae.",
-    )
-    parser.add_argument(
-        "--early-stop-mae",
-        type=float,
-        default=TABLE1_CELL_GAP_LIMIT,
-        help="Maximum absolute percent gap versus Table I used with --early-stop-epoch.",
-    )
-    parser.add_argument(
         "--revelation",
         type=str,
         default=DEFAULT_REVELATION,
@@ -247,10 +262,23 @@ def parse_args():
         help="Arrival process: hpp (Uniform(0, T]) or poisson (Eq. 34 PMF).",
     )
     parser.add_argument(
+        "--distribution",
+        type=str,
+        default=DEFAULT_DISTRIBUTION,
+        choices=list(SPATIAL_DISTRIBUTIONS),
+        help="Spatial distribution of customers (uniform, clustered, mixed, real).",
+    )
+    parser.add_argument(
+        "--real-data-path",
+        type=str,
+        default=None,
+        help="Path to CSV file with coordinates for 'real' distribution.",
+    )
+    parser.add_argument(
         "--disclose-horizon-tail",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help="If set, disclose a_i <= T_{r+1}. Default discloses a_i <= T_r.",
+        help="Disclose a_i <= T_{r+1} at the start of interval r (Algorithm 1). Default False uses a_i <= T_r.",
     )
     return parser.parse_args()
 
@@ -272,16 +300,19 @@ def train(args):
     suffix = f"_n{args.customer_count}" if args.customer_count != DEFAULT_CUSTOMER_COUNT else ""
     checkpoint_path = args.output_dir / f"{args.method}{suffix}.pt"
     best_checkpoint_path = args.output_dir / f"{args.method}{suffix}_best.pt"
-    table1_best_checkpoint_path = args.output_dir / f"{args.method}{suffix}_table1_best.pt"
 
     print("=" * 76)
     print(f"  Training DCVRP Model: {args.method}")
     print(f"  Scale: n = {args.customer_count} customers, m = {args.vehicle_count} vehicles")
     print(f"  Hyperparameters: {args.epochs} epochs, {args.steps_per_epoch} steps/epoch, batch size {args.batch_size}")
     print(f"  Policy rollouts: {args.rollouts} | Vehicle: sample train / argmax eval | Baseline: greedy rollout + t-test 0.05")
+    train_rates = tuple(
+        float(rate) for rate in (args.train_rates or DEFAULT_DYNAMIC_RATES)
+    )
+    args.train_rates = train_rates
     print(
-        f"  Arrivals: {args.revelation} | disclose a_i<=T_r={not args.disclose_horizon_tail} | "
-        f"phi={DEFAULT_DYNAMIC_RATES}"
+        f"  Arrivals: {args.revelation} | visibility a_i<=T_{{r+1}}={args.disclose_horizon_tail} | "
+        f"phi={DEFAULT_DYNAMIC_RATES} | train-phi={train_rates} | baseline=greedy-rollout"
     )
     print(f"  Seed: {args.seed} | Device: {device}")
     print(f"  Optimizer: Adam (lr={args.lr} cosine to 1e-5, clip={args.max_grad_norm})")
@@ -305,8 +336,6 @@ def train(args):
     start_epoch = 1
     best_val_dist = float("inf")
     best_val_objective = float("inf")
-    best_table1_max = float("inf")
-    last_table1_all_within = False
 
     if args.resume and args.resume.exists():
         print(f"Resuming training from checkpoint: {args.resume}")
@@ -324,10 +353,6 @@ def train(args):
             prev_val = chk.get("val_distance", float("inf"))
             best_val_dist = float("inf") if prev_val == 0.0 else float(prev_val)
             best_val_objective = float(chk.get("val_objective", float("inf")))
-            prev_table1 = chk.get("table1_max_gap")
-            if prev_table1 is not None:
-                best_table1_max = float(prev_table1)
-            last_table1_all_within = bool(chk.get("table1_all_within", False))
         print(
             f"Resumed weights loaded (last val distance: {best_val_dist:.2f}, "
             f"objective: {best_val_objective:.2f})"
@@ -341,15 +366,13 @@ def train(args):
         vehicle_count=args.vehicle_count,
         seed=args.seed + 9999,
         revelation=args.revelation,
+        distribution=args.distribution,
+        real_data_path=args.real_data_path,
     )
-    baseline_dataset = val_split[0.50]
-    table1_split = generate_evaluation_split(
-        instances=args.val_size,
-        dynamic_rates=DEFAULT_DYNAMIC_RATES,
-        customer_count=args.customer_count,
-        vehicle_count=args.vehicle_count,
-        seed=20260821,
-        revelation=args.revelation,
+    baseline_dataset = merge_datasets(list(val_split.values()))
+    print(
+        f"  Baseline t-test pools all phi ({len(baseline_dataset)} instances)",
+        flush=True,
     )
     set_seed(args.seed)
     for _ in range(start_epoch - 1):
@@ -370,13 +393,15 @@ def train(args):
         total_loss = 0.0
 
         for step in range(1, args.steps_per_epoch + 1):
-            rate = float(DEFAULT_DYNAMIC_RATES[step % len(DEFAULT_DYNAMIC_RATES)])
+            rate = float(args.train_rates[step % len(args.train_rates)])
             data = generate_dataset(
                 batch_size=args.batch_size,
                 customer_count=args.customer_count,
                 vehicle_count=args.vehicle_count,
                 dynamic_rate=rate,
                 revelation=args.revelation,
+                distribution=args.distribution,
+                real_data_path=args.real_data_path,
             )
 
             with torch.no_grad():
@@ -399,10 +424,11 @@ def train(args):
                 args.rollouts, dim=0
             )
             advantage = (policy_returns - repeated_baseline).detach()
-            adv_std = advantage.std()
-            if float(adv_std) > 1e-6:
-                advantage = (advantage - advantage.mean()) / adv_std
-            rollout_loss = -(log_prob * advantage).mean()
+            # Follow Eq. 33 directly: do not center advantages around their batch mean,
+            # which corrupts the greedy rollout baseline by turning underperforming rollouts positive.
+            adv_scale = advantage.std().clamp_min(1.0)
+            scaled_advantage = advantage / adv_scale
+            rollout_loss = -(log_prob * scaled_advantage).mean()
             rollout_loss.backward()
             step_loss = rollout_loss.item()
 
@@ -415,6 +441,9 @@ def train(args):
                     f"loss {step_loss:.4f}",
                     flush=True,
                 )
+            del env, rollout_data, data, log_probabilities, rewards, log_prob, policy_returns, advantage, scaled_advantage, rollout_loss, baseline_returns
+            if step % 25 == 0 and device.type == "cuda":
+                torch.cuda.empty_cache()
 
         epoch_time = time.perf_counter() - epoch_start
         avg_loss = total_loss / args.steps_per_epoch
@@ -481,33 +510,6 @@ def train(args):
                     record_trace=False,
                     disclose_horizon_tail=args.disclose_horizon_tail,
                 )
-                model_eval(env_t)
-                key = round(float(t_rate), 2)
-                table1_measured[key] = env_t.route_distance().mean().item()
-                table1_qos[key] = env_t.qos().mean().item() * 100.0
-        table1_report = table1_gap_report(
-            args.customer_count,
-            args.method,
-            table1_measured,
-            cell_limit=float(args.early_stop_mae),
-            qos_by_rate=table1_qos,
-            min_qos_percent=100.0,
-        )
-        table1_mae = table1_report["mae"]
-        table1_max = table1_report["max_abs"]
-        last_table1_all_within = bool(table1_report["all_within"])
-        table1_all_within = last_table1_all_within
-        if table1_report["parts"]:
-            print(
-                f"         table1-phi {' '.join(table1_report['parts'])} | "
-                f"MAE {table1_mae:.2f}% max {table1_max:.2f}%",
-                flush=True,
-            )
-            qos_phi = " ".join(
-                f"{rate:.2f}:{qos:.1f}%" for rate, qos in table1_qos.items()
-            )
-            print(f"         table1-qos-by-phi {qos_phi}", flush=True)
-
         param_count = int(sum(p.numel() for p in model.parameters()))
         checkpoint_dict = {
             "epoch": epoch,
@@ -532,20 +534,8 @@ def train(args):
             "rollouts": int(args.rollouts),
             "seed": int(args.seed),
             "revelation": str(args.revelation),
+            "distribution": str(args.distribution),
             "disclose_horizon_tail": bool(args.disclose_horizon_tail),
-            "table1_mae": table1_mae,
-            "table1_max_gap": table1_max,
-            "table1_gap_by_rate": {
-                str(rate): float(gap) for rate, gap in table1_report["signed"].items()
-            },
-            "table1_cost_by_rate": {
-                str(rate): float(cost) for rate, cost in table1_measured.items()
-            },
-            "table1_qos_by_rate": {
-                str(rate): float(qos) for rate, qos in table1_qos.items()
-            },
-            "table1_all_within": table1_all_within,
-            "table1_cell_limit": float(args.early_stop_mae),
         }
         torch.save(checkpoint_dict, checkpoint_path)
 
@@ -558,34 +548,9 @@ def train(args):
             best_val_objective = mean_val_objective
             best_val_dist = mean_val_dist
             torch.save(publish, best_checkpoint_path)
-        if table1_max is not None and table1_max < best_table1_max:
-            best_table1_max = table1_max
-            torch.save(publish, table1_best_checkpoint_path)
         scheduler.step()
-        cost_within = (
-            table1_max is not None
-            and len(table1_report.get("signed", {})) >= 4
-            and table1_max <= args.early_stop_mae
-        )
-        if cost_within and args.early_stop_epoch > 0:
-            print(
-                f"         Early stop: every Table I cell within "
-                f"{args.early_stop_mae:.1f}%.",
-                flush=True,
-            )
-            break
-        if (
-            args.early_stop_epoch > 0
-            and epoch == args.early_stop_epoch
-            and table1_max is not None
-            and table1_max > args.early_stop_mae
-        ):
-            print(
-                f"         Early stop at epoch {epoch}: max Table I gap "
-                f"{table1_max:.2f}% > {args.early_stop_mae:.1f}%.",
-                flush=True,
-            )
-            break
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
 
     print(f"\nTraining completed. Final checkpoint saved to: {checkpoint_path}")
     if best_checkpoint_path.exists():
@@ -593,17 +558,10 @@ def train(args):
             f"Best validation checkpoint saved to: {best_checkpoint_path} "
             f"(objective: {best_val_objective:.2f}, distance: {best_val_dist:.2f})"
         )
-    if table1_best_checkpoint_path.exists():
-        print(
-            f"Closest Table I checkpoint saved to: {table1_best_checkpoint_path} "
-            f"(max gap: {best_table1_max:.2f}%)"
-        )
     return {
         "seed": int(args.seed),
         "best_val_dist": None if best_val_dist == float("inf") else float(best_val_dist),
         "best_val_objective": None if best_val_objective == float("inf") else float(best_val_objective),
-        "best_table1_max_gap": None if best_table1_max == float("inf") else float(best_table1_max),
-        "table1_all_within": bool(last_table1_all_within),
         "checkpoint": str(checkpoint_path),
     }
 
