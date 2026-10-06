@@ -1,11 +1,5 @@
 # Distributed Vehicle Network with Decision Aggregation (DVNDA)
 
-This repository contains the official PyTorch implementation for solving the **Dynamic Capacitated Vehicle Routing Problem (DCVRP)** using the DVNDA framework. It strictly adheres to the experimental setup and real-world topological evaluations described in the associated paper and supplementary materials.
-
-## Features
-- **DVNDA Model**: Transformer-based encoder with distributed node-selection decoders for routing.
-- **Dynamic Revelation Patterns**: Standard HPP, Truncated Poisson, Early Peak, and Late Peak.
-- **Topological Generalization**: Supports synthetic layouts (Uniform, Clustered, Mixed) and real-world street network coordinates (Vienna, London, New York).
 
 ## Installation
 
